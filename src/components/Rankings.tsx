@@ -130,9 +130,13 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-800 mb-4">📊 統計情報</h2>
-        <p className="text-gray-600">議員の活動状況や人気の質問を統計情報としてご紹介</p>
+      <div className="text-center space-y-4">
+        <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
+          🔮 統計情報
+        </h1>
+        <p className="text-gray-300 text-sm sm:text-base max-w-2xl mx-auto">
+          議員の活動状況や人気の質問を統計情報としてご紹介
+        </p>
       </div>
 
       {/* Stats Overview */}

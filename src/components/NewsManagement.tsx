@@ -71,9 +71,8 @@ export function NewsManagement() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-yellow-400 flex items-center space-x-2 amano-text-glow">
-            <span>✨</span>
-            <span>お知らせ管理</span>
+          <h2 className="text-2xl font-bold text-yellow-400 amano-text-glow">
+            ✨ お知らせ管理
           </h2>
           <p className="text-gray-300 text-sm mt-1">
             お知らせの追加・編集・削除
@@ -81,14 +80,14 @@ export function NewsManagement() {
         </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-6 py-3 rounded-lg font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border animate-amano-glow"
+          className="auth-button px-6 py-3"
         >
           ➕ 新しいお知らせを追加
         </button>
       </div>
 
       {/* Filters */}
-      <div className="amano-bg-glass rounded-xl p-4 space-y-4 amano-crystal-border">
+      <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 amano-crystal-border">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <input
@@ -131,7 +130,7 @@ export function NewsManagement() {
       <div className="space-y-4">
         {filteredNews && filteredNews.length > 0 ? (
           filteredNews.map((newsItem) => (
-            <div key={newsItem._id} className="amano-bg-glass rounded-xl p-6 amano-crystal-border hover:shadow-2xl transition-all duration-300">
+            <div key={newsItem._id} className="amano-bg-glass rounded-lg p-4 border border-gray-500/30 hover:border-yellow-400/50 transition-all duration-300">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -170,13 +169,13 @@ export function NewsManagement() {
                 <div className="flex space-x-2 flex-shrink-0">
                   <button
                     onClick={() => handleEdit(newsItem)}
-                    className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg text-sm hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 transform hover:scale-105"
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors"
                   >
                     編集
                   </button>
                   <button
                     onClick={() => handleDelete(newsItem._id)}
-                    className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm hover:from-pink-500 hover:to-red-500 transition-all duration-300 transform hover:scale-105"
+                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
                   >
                     削除
                   </button>
@@ -185,7 +184,7 @@ export function NewsManagement() {
             </div>
           ))
         ) : (
-          <div className="text-center py-12 amano-bg-glass rounded-xl amano-crystal-border">
+          <div className="text-center py-12 amano-bg-card rounded-xl p-6 shadow-2xl border border-purple-500/30 amano-crystal-border">
             <div className="text-6xl mb-4">📰</div>
             <p className="text-gray-300 text-lg">
               {searchTerm || filterStatus !== "all" || filterCategory !== "all" 
@@ -195,7 +194,7 @@ export function NewsManagement() {
             {!searchTerm && filterStatus === "all" && filterCategory === "all" && (
               <button
                 onClick={() => setIsFormOpen(true)}
-                className="mt-4 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-6 py-3 rounded-lg font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105"
+                className="mt-4 auth-button px-6 py-3"
               >
                 最初のお知らせを追加
               </button>

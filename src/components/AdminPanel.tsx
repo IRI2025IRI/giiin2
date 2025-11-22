@@ -7,6 +7,7 @@ import { NewsManagement } from "./NewsManagement";
 import { UserManagement } from "./UserManagement";
 import { SlideshowManagement } from "./SlideshowManagement";
 import { FAQManagement } from "./FAQManagement";
+import { ContactManagement } from "./ContactManagement";
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState("members");
@@ -19,6 +20,7 @@ export function AdminPanel() {
     { id: "news", label: "お知らせ管理", icon: "✨" },
     { id: "slideshow", label: "スライドショー管理", icon: "🖼️" },
     { id: "faq", label: "FAQ管理", icon: "❓" },
+    { id: "contact", label: "お問い合わせ管理", icon: "📧" },
   ];
 
   // スーパー管理者のみアクセス可能なタブ
@@ -38,6 +40,8 @@ export function AdminPanel() {
         return <SlideshowManagement />;
       case "faq":
         return <FAQManagement />;
+      case "contact":
+        return <ContactManagement />;
       case "users":
         return isSuperAdmin ? <UserManagement /> : <div>アクセス権限がありません</div>;
       default:

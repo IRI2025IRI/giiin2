@@ -10,8 +10,9 @@ interface CouncilMemberListProps {
 
 export function CouncilMemberList({ onMemberClick }: CouncilMemberListProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedParty, setSelectedParty] = useState("all");
+  const [selectedGroup, setSelectedGroup] = useState("all");
   const [sortBy, setSortBy] = useState("name");
+  const [showFilters, setShowFilters] = useState(false);
   
   const members = useQuery(api.councilMembers.list, { activeOnly: true });
   const memberStats: any[] = [];
@@ -27,27 +28,27 @@ export function CouncilMemberList({ onMemberClick }: CouncilMemberListProps) {
     );
   }
 
-  // Get unique parties for filter
-  const parties = Array.from(new Set(members.map(m => m.politicalParty).filter(Boolean)));
+  // Get unique groups for filter
+  const groups = Array.from(new Set(members.map(m => m.party).filter(Boolean)));
 
   // Filter and sort members
   const filteredMembers = members
     .filter(member => {
       const matchesSearch = searchQuery === "" || 
         member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (member.politicalParty && member.politicalParty.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (member.party && member.party.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (member.position && member.position.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      const matchesParty = selectedParty === "all" || member.politicalParty === selectedParty;
+      const matchesGroup = selectedGroup === "all" || member.party === selectedGroup;
       
-      return matchesSearch && matchesParty;
+      return matchesSearch && matchesGroup;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case "name":
           return a.name.localeCompare(b.name, 'ja');
-        case "party":
-          return (a.politicalParty || "").localeCompare(b.politicalParty || "", 'ja');
+        case "group":
+          return (a.party || "").localeCompare(b.party || "", 'ja');
         case "questions":
           const aStats = memberStats?.find(s => s.memberId === a._id);
           const bStats = memberStats?.find(s => s.memberId === b._id);
@@ -75,63 +76,89 @@ export function CouncilMemberList({ onMemberClick }: CouncilMemberListProps) {
 
       {/* Filters */}
       <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              検索
-            </label>
-            <input
-              type="text"
-              placeholder="議員名、政党、役職で検索..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="auth-input-field text-sm"
-            />
-          </div>
+        {/* Filter Toggle Button */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-yellow-400 amano-text-glow">
+            🔍 検索・フィルター
+          </h3>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors flex items-center space-x-2"
+          >
+            <span>{showFilters ? "閉じる" : "開く"}</span>
+            <span className={`transform transition-transform ${showFilters ? "rotate-180" : ""}`}>
+              ▼
+            </span>
+          </button>
+        </div>
 
-          {/* Party Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              政党
-            </label>
-            <select
-              value={selectedParty}
-              onChange={(e) => setSelectedParty(e.target.value)}
-              className="auth-input-field text-sm"
-            >
-              <option value="all">すべて</option>
-              {parties.map((party) => (
-                <option key={party} value={party}>
-                  {party}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Collapsible Filter Content */}
+        {showFilters && (
+          <div className="space-y-4 animate-slideDown">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Search */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  検索
+                </label>
+                <input
+                  type="text"
+                  placeholder="議員名、会派、役職で検索..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="auth-input-field text-sm"
+                />
+              </div>
 
-          {/* Sort */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              並び順
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="auth-input-field text-sm"
-            >
-              <option value="name">名前順</option>
-              <option value="party">政党順</option>
-              <option value="questions">質問数順</option>
-              <option value="likes">いいね数順</option>
-            </select>
-          </div>
+              {/* Group Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  会派
+                </label>
+                <select
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="auth-input-field text-sm"
+                >
+                  <option value="all">すべて</option>
+                  {groups.map((group) => (
+                    <option key={group} value={group}>
+                      {group}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* Results Count */}
-          <div className="flex items-end">
-            <div className="text-sm text-gray-400">
-              {filteredMembers.length}名 / {members.length}名
+              {/* Sort */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  並び順
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="auth-input-field text-sm"
+                >
+                  <option value="name">名前順</option>
+                  <option value="group">会派順</option>
+                  <option value="questions">質問数順</option>
+                  <option value="likes">いいね数順</option>
+                </select>
+              </div>
+
+              {/* Results Count */}
+              <div className="flex items-end">
+                <div className="text-sm text-gray-400">
+                  {filteredMembers.length}名 / {members.length}名
+                </div>
+              </div>
             </div>
           </div>
+        )}
+
+        {/* Results Info (always visible) */}
+        <div className={`${showFilters ? 'mt-4 pt-4 border-t border-purple-500/30' : ''} flex justify-between items-center text-sm text-gray-400`}>
+          <span>{filteredMembers.length}名の議員が見つかりました</span>
         </div>
       </div>
 
