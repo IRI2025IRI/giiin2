@@ -21,6 +21,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps = {}) {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "likes">("newest");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const itemsPerPage = 10;
 
   // Reset page when filters change
@@ -74,6 +75,17 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps = {}) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const hasActiveFilters = searchTerm || selectedCategory !== "all" || selectedMember !== "all" || selectedSession !== "all" || selectedStatus !== "all";
+
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+    setSelectedMember("all");
+    setSelectedSession("all");
+    setSelectedStatus("all");
+    setSortBy("newest");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -86,136 +98,154 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps = {}) {
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="amano-bg-glass rounded-xl p-6 space-y-4 amano-crystal-border">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Search */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              🔍 キーワード検索
-            </label>
-            <input
-              type="text"
-              placeholder="質問内容、議員名で検索..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="auth-input-field"
-            />
-          </div>
-
-          {/* Category Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              📂 カテゴリ
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="auth-input-field"
-            >
-              <option value="all">全てのカテゴリ</option>
-              {categories?.map((category) => (
-                <option key={category.name} value={category.name}>
-                  {category.name} ({category.count})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Member Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              👤 議員
-            </label>
-            <select
-              value={selectedMember}
-              onChange={(e) => setSelectedMember(e.target.value)}
-              className="auth-input-field"
-            >
-              <option value="all">全ての議員</option>
-              {councilMembers?.map((member) => (
-                <option key={member._id} value={member._id}>
-                  {member.name} ({member.party})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Session Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              📅 会期
-            </label>
-            <select
-              value={selectedSession}
-              onChange={(e) => setSelectedSession(e.target.value)}
-              className="auth-input-field"
-            >
-              <option value="all">全ての会期</option>
-              {sessionNumbers?.map((session) => (
-                <option key={session} value={session}>
-                  {session}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              📊 ステータス
-            </label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="auth-input-field"
-            >
-              <option value="all">全てのステータス</option>
-              <option value="answered">回答済み</option>
-              <option value="pending">回答待ち</option>
-              <option value="archived">アーカイブ</option>
-            </select>
-          </div>
-
-          {/* Sort */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              🔄 並び順
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="auth-input-field"
-            >
-              <option value="newest">新しい順</option>
-              <option value="oldest">古い順</option>
-              <option value="likes">いいね順</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Results Summary */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-purple-500">
-          <div className="text-gray-300">
-            <span className="text-yellow-400 font-semibold">{filteredQuestions.length}</span> 件の質問が見つかりました
-          </div>
-          {(searchTerm || selectedCategory !== "all" || selectedMember !== "all" || selectedSession !== "all" || selectedStatus !== "all") && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedCategory("all");
-                setSelectedMember("all");
-                setSelectedSession("all");
-                setSelectedStatus("all");
-                setSortBy("newest");
-              }}
-              className="text-sm bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all duration-300 transform hover:scale-105"
-            >
-              🗑️ フィルターをクリア
-            </button>
+      {/* Filter Toggle Button */}
+      <div className="flex items-center justify-between amano-bg-glass rounded-xl p-4 amano-crystal-border">
+        <div className="flex items-center space-x-3">
+          <span className="text-lg">🔍</span>
+          <span className="font-medium text-gray-200">検索・フィルター</span>
+          {hasActiveFilters && (
+            <span className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium animate-amano-glow">
+              フィルター適用中
+            </span>
           )}
+          <span className="text-gray-400 text-sm">
+            ({filteredQuestions.length} 件)
+          </span>
         </div>
+        <button
+          onClick={() => setIsFilterOpen(!isFilterOpen)}
+          className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 amano-crystal-border"
+        >
+          <span>{isFilterOpen ? "▲" : "▼"}</span>
+          <span className="hidden sm:inline">{isFilterOpen ? "閉じる" : "開く"}</span>
+        </button>
       </div>
+
+      {/* Filters */}
+      {isFilterOpen && (
+        <div className="amano-bg-glass rounded-xl p-6 space-y-4 amano-crystal-border animate-slideDown">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Search */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                🔍 キーワード検索
+              </label>
+              <input
+                type="text"
+                placeholder="質問内容、議員名で検索..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="auth-input-field"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                📂 カテゴリ
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="auth-input-field"
+              >
+                <option value="all">全てのカテゴリ</option>
+                {categories?.map((category) => (
+                  <option key={category.name} value={category.name}>
+                    {category.name} ({category.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Member Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                👤 議員
+              </label>
+              <select
+                value={selectedMember}
+                onChange={(e) => setSelectedMember(e.target.value)}
+                className="auth-input-field"
+              >
+                <option value="all">全ての議員</option>
+                {councilMembers?.map((member) => (
+                  <option key={member._id} value={member._id}>
+                    {member.name} ({member.party})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Session Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                📅 会期
+              </label>
+              <select
+                value={selectedSession}
+                onChange={(e) => setSelectedSession(e.target.value)}
+                className="auth-input-field"
+              >
+                <option value="all">全ての会期</option>
+                {sessionNumbers?.map((session) => (
+                  <option key={session} value={session}>
+                    {session}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                📊 ステータス
+              </label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="auth-input-field"
+              >
+                <option value="all">全てのステータス</option>
+                <option value="answered">回答済み</option>
+                <option value="pending">回答待ち</option>
+                <option value="archived">アーカイブ</option>
+              </select>
+            </div>
+
+            {/* Sort */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                🔄 並び順
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="auth-input-field"
+              >
+                <option value="newest">新しい順</option>
+                <option value="oldest">古い順</option>
+                <option value="likes">いいね順</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Filter Actions */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-purple-500">
+            <div className="text-gray-300">
+              <span className="text-yellow-400 font-semibold">{filteredQuestions.length}</span> 件の質問が見つかりました
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="text-sm bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-pink-500 hover:to-red-500 transition-all duration-300 transform hover:scale-105 amano-crystal-border"
+              >
+                🗑️ フィルターをクリア
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Questions List */}
       <div className="space-y-4">
@@ -237,13 +267,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps = {}) {
               検索条件を変更してお試しください
             </p>
             <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedCategory("all");
-                setSelectedMember("all");
-                setSelectedSession("all");
-                setSelectedStatus("all");
-              }}
+              onClick={clearAllFilters}
               className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-6 py-3 rounded-lg font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border animate-amano-glow"
             >
               全ての質問を表示

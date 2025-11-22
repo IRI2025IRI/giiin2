@@ -4,6 +4,7 @@ import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import { SignOutButton } from "./SignOutButton";
 import { LoginModal } from "./components/LoginModal";
+import { EmailVerificationModal } from "./components/EmailVerificationModal";
 import { Dashboard } from "./components/Dashboard";
 import { CouncilMemberList } from "./components/CouncilMemberList";
 import { CouncilMemberDetail } from "./components/CouncilMemberDetail";
@@ -12,11 +13,14 @@ import { QuestionCard } from "./components/QuestionCard";
 import { News } from "./components/News";
 import { AdminPanel } from "./components/AdminPanel";
 import { Rankings } from "./components/Rankings";
+import { TermsAndPrivacy } from "./components/TermsAndPrivacy";
+import { ScrollToTopButton } from "./components/ScrollToTopButton";
 import { safeScrollTo } from "./lib/utils";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isEmailVerificationModalOpen, setIsEmailVerificationModalOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<Id<"councilMembers"> | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<Id<"questions"> | null>(null);
   const [selectedNewsId, setSelectedNewsId] = useState<Id<"news"> | null>(null);
@@ -26,6 +30,7 @@ export default function App() {
   const isAdmin = useQuery(api.admin.isAdmin);
   const isSuperAdmin = useQuery(api.admin.isSuperAdmin);
   const userRole = useQuery(api.admin.getUserRole);
+  const emailStatus = useQuery(api.emailAuth.getEmailVerificationStatus);
   const makeFirstUserSuperAdmin = useMutation(api.admin.makeFirstUserSuperAdmin);
   const selectedQuestion = useQuery(
     api.questions.getById,
@@ -52,6 +57,21 @@ export default function App() {
       setIsLoginModalOpen(false);
     }
   }, [user, isLoginModalOpen]);
+
+  // Check email verification status
+  useEffect(() => {
+    if (user && emailStatus !== undefined) {
+      // ユーザーがログインしているが、メール認証が完了していない場合
+      if (!emailStatus || !emailStatus.isVerified) {
+        // 5秒後にメール認証モーダルを表示
+        const timer = setTimeout(() => {
+          setIsEmailVerificationModalOpen(true);
+        }, 5000);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, emailStatus]);
 
   // Debug useEffect to track state changes
   useEffect(() => {
@@ -171,12 +191,17 @@ export default function App() {
         return <Rankings onMemberClick={handleMemberClick} onQuestionClick={handleQuestionClick} />;
       case "news":
         return <News selectedNewsId={selectedNewsId} onNewsSelect={handleNewsSelect} />;
+      case "terms":
+        return <TermsAndPrivacy />;
       case "admin":
         return isAdmin ? <AdminPanel /> : <div>アクセス権限がありません</div>;
       default:
         return <Dashboard onMemberClick={handleMemberClick} onQuestionClick={handleQuestionClick} onNewsClick={handleNewsClick} />;
     }
   };
+
+  // メール認証が必要かどうかを判定
+  const needsEmailVerification = user && emailStatus !== undefined && (!emailStatus || !emailStatus.isVerified);
 
   return (
     <div className="min-h-screen amano-bg-primary">
@@ -186,6 +211,22 @@ export default function App() {
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4 animate-amano-glow"></div>
             <p className="text-gray-300 amano-text-glow">読み込み中...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Email Verification Warning Banner */}
+      {needsEmailVerification && (
+        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-3 text-center relative z-30">
+          <div className="flex items-center justify-center space-x-2 text-sm sm:text-base">
+            <span>📧</span>
+            <span>メール認証が完了していません。</span>
+            <button
+              onClick={() => setIsEmailVerificationModalOpen(true)}
+              className="underline hover:no-underline font-medium"
+            >
+              今すぐ認証する
+            </button>
           </div>
         </div>
       )}
@@ -207,7 +248,7 @@ export default function App() {
                 <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent truncate amano-text-glow">
                   GIIIN/ギイーン
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-300 hidden sm:block">市民の声を届ける議会活動</p>
+                <p className="text-xs sm:text-sm text-gray-300 hidden sm:block">～議員の活動をわかりやすく見える化へ～</p>
               </div>
             </div>
 
@@ -224,6 +265,11 @@ export default function App() {
                     <p className="text-sm font-medium text-gray-200 truncate max-w-32 amano-text-glow">
                       {user.name || user.email || "ユーザー"}
                     </p>
+                    {needsEmailVerification && (
+                      <p className="text-xs text-yellow-400 font-medium amano-text-glow">
+                        メール認証待ち
+                      </p>
+                    )}
                     {userRole && userRole !== "user" && (
                       <p className="text-xs text-yellow-400 font-medium amano-text-glow">
                         {userRole === "superAdmin" ? "運営者" : "編集者"}
@@ -247,7 +293,7 @@ export default function App() {
       </header>
 
       {/* Navigation */}
-      <nav className="amano-bg-glass shadow-lg border-b border-purple-500 sticky top-16 sm:top-20 z-30">
+      <nav className={`amano-bg-glass shadow-lg border-b border-purple-500 sticky z-30 ${needsEmailVerification ? 'top-12' : 'top-16 sm:top-20'}`}>
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex space-x-1 overflow-x-auto py-2 sm:py-4 scrollbar-hide">
             {tabs.map((tab) => (
@@ -290,10 +336,19 @@ export default function App() {
               <h3 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">GIIIN/ギイーン</h3>
             </div>
             <p className="text-gray-300 mb-4 text-sm sm:text-base px-4">
-              市民の皆様の声を市政に反映させるため、議員の活動を透明化し、
-              <span className="hidden sm:inline"><br /></span>
-              より身近で開かれた議会をめざそう。
+              <span className="hidden sm:inline"></span>
             </p>
+            
+            {/* Legal Links */}
+            <div className="flex flex-wrap justify-center gap-4 mb-4">
+              <button
+                onClick={() => setActiveTab("terms")}
+                className="text-cyan-400 hover:text-yellow-400 text-sm underline hover:no-underline transition-colors"
+              >
+                利用規約・プライバシーポリシー
+              </button>
+            </div>
+            
             <div className="text-xs sm:text-sm text-gray-400 px-4">
               <p>※ このサイトは三原市非公認です。実際のデータは各自治体議会の公式情報をご確認ください。</p>
               <p className="mt-2">お問い合わせ：info@giiin.info</p>
@@ -308,6 +363,16 @@ export default function App() {
         isOpen={isLoginModalOpen} 
         onClose={() => setIsLoginModalOpen(false)} 
       />
+
+      {/* Email Verification Modal */}
+      <EmailVerificationModal
+        isOpen={isEmailVerificationModalOpen}
+        onClose={() => setIsEmailVerificationModalOpen(false)}
+        userEmail={user?.email}
+      />
+
+      {/* Scroll to Top Button */}
+      <ScrollToTopButton />
     </div>
   );
 }

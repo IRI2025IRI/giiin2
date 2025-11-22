@@ -16,7 +16,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
 
-  const requestEmailVerification = useAction(api.emailAuth.requestEmailVerification);
+  const requestEmailVerification = useAction(api.emailActions.sendVerificationEmail);
 
   if (!isOpen) return null;
 
@@ -72,7 +72,6 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   try {
                     await requestEmailVerification({
                       email,
-                      userName: name,
                     });
                     toast.success("アカウントを作成しました！認証メールをご確認ください。");
                     onClose();

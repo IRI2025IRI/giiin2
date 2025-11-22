@@ -46,7 +46,7 @@ const applicationTables = {
   responses: defineTable({
     questionId: v.id("questions"),
     content: v.string(),
-    respondentTitle: v.string(),
+    respondentTitle: v.optional(v.string()),
     department: v.optional(v.string()),
     responseDate: v.number(),
     documentUrl: v.optional(v.string()),

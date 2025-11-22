@@ -14,7 +14,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
   const [error, setError] = useState("");
   const [isEmailSent, setIsEmailSent] = useState(false);
 
-  const requestPasswordReset = useAction(api.emailAuth.requestPasswordReset);
+  const requestPasswordReset = useAction(api.emailActions.sendPasswordResetEmail);
 
   if (!isOpen) return null;
 
@@ -62,7 +62,7 @@ export function PasswordResetModal({ isOpen, onClose }: PasswordResetModalProps)
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p className="text-blue-800 text-sm">
                   📧 メールが届かない場合は、迷惑メールフォルダもご確認ください。<br />
-                  リンクは24時間有効です。
+                  リンクは1時間有効です。
                 </p>
               </div>
 

@@ -410,7 +410,7 @@ export const addResponse = mutation({
   args: {
     questionId: v.id("questions"),
     content: v.string(),
-    respondentTitle: v.string(),
+    respondentTitle: v.optional(v.string()),
     department: v.optional(v.string()),
     documentUrl: v.optional(v.string()),
   },

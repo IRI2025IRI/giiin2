@@ -23,7 +23,7 @@ interface QuestionCardProps {
     responses?: Array<{
       _id: Id<"responses">;
       content: string;
-      respondentTitle: string;
+      respondentTitle?: string;
       department?: string;
       responseDate: number;
       documentUrl?: string;
@@ -224,7 +224,7 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
               <div key={response._id} className="amano-bg-card rounded-lg p-4 amano-crystal-border">
                 <div className="flex flex-wrap items-center gap-2 mb-3">
                   <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                    {response.respondentTitle}
+                    {response.respondentTitle || "未記入"}
                   </span>
                   {response.department ? (
                     <span className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1 rounded-full text-xs font-medium">

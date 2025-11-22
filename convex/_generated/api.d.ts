@@ -16,6 +16,7 @@ import type {
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as councilMembers from "../councilMembers.js";
+import type * as emailActions from "../emailActions.js";
 import type * as emailAuth from "../emailAuth.js";
 import type * as http from "../http.js";
 import type * as likes from "../likes.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
   councilMembers: typeof councilMembers;
+  emailActions: typeof emailActions;
   emailAuth: typeof emailAuth;
   http: typeof http;
   likes: typeof likes;

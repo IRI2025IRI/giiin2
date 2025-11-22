@@ -48,7 +48,7 @@ export function ResponseForm({ questionId, response, onClose, onSuccess, onCance
         await updateResponse({
           id: response._id,
           content: formData.content,
-          respondentTitle: formData.respondentTitle,
+          respondentTitle: formData.respondentTitle || undefined,
           department: formData.department || undefined,
           documentUrl: formData.documentUrl || undefined,
           responseDate,
@@ -61,7 +61,7 @@ export function ResponseForm({ questionId, response, onClose, onSuccess, onCance
         await addResponse({
           questionId,
           content: formData.content,
-          respondentTitle: formData.respondentTitle,
+          respondentTitle: formData.respondentTitle || undefined,
           department: formData.department || undefined,
           documentUrl: formData.documentUrl || undefined,
         });
@@ -124,15 +124,14 @@ export function ResponseForm({ questionId, response, onClose, onSuccess, onCance
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  回答者役職 <span className="text-red-500">*</span>
+                  回答者役職
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.respondentTitle}
                   onChange={(e) => handleInputChange("respondentTitle", e.target.value)}
                   className="auth-input-field"
-                  placeholder="例：市長、部長、課長など"
+                  placeholder="例：市長、部長、課長など（未記入の場合は「未記入」と表示されます）"
                 />
               </div>
               <div className="md:col-span-2">
