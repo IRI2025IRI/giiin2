@@ -67,17 +67,25 @@ export function SlideshowManagement() {
     setIsSubmitting(true);
 
     try {
+      // 空の文字列をundefinedに変換
+      const submitData = {
+        ...formData,
+        imageUrl: formData.imageUrl.trim() || undefined,
+        linkUrl: formData.linkUrl.trim() || undefined,
+      };
+
       if (editingSlide) {
         await updateSlide({
           id: editingSlide._id,
-          ...formData,
+          ...submitData,
         });
       } else {
-        await createSlide(formData);
+        await createSlide(submitData);
       }
       handleFormClose();
     } catch (error) {
       console.error("Failed to save slide:", error);
+      alert("保存に失敗しました。もう一度お試しください。");
     } finally {
       setIsSubmitting(false);
     }

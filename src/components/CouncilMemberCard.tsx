@@ -1,13 +1,18 @@
 import { Doc } from "../../convex/_generated/dataModel";
 
 interface CouncilMemberCardProps {
-  member: Doc<"councilMembers">;
+  member: Doc<"councilMembers"> & { memberPhotoUrl?: string | null };
+  onClick?: () => void;
 }
 
-export function CouncilMemberCard({ member }: CouncilMemberCardProps) {
+export function CouncilMemberCard({ member, onClick }: CouncilMemberCardProps) {
   const handleClick = () => {
-    // This will be handled by the parent component
-    window.dispatchEvent(new CustomEvent('memberClick', { detail: member._id }));
+    if (onClick) {
+      onClick();
+    } else {
+      // Fallback to custom event
+      window.dispatchEvent(new CustomEvent('memberClick', { detail: member._id }));
+    }
   };
 
   return (
@@ -17,9 +22,9 @@ export function CouncilMemberCard({ member }: CouncilMemberCardProps) {
     >
       {/* Photo Section */}
       <div className="relative h-32 sm:h-40 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-        {member.photoUrl ? (
+        {(member.memberPhotoUrl || member.photoUrl) ? (
           <img
-            src={member.photoUrl}
+            src={member.memberPhotoUrl || member.photoUrl}
             alt={member.name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />

@@ -118,6 +118,37 @@ const applicationTables = {
   })
     .index("by_user", ["userId"])
     .index("by_email", ["email"]),
+
+  // お問い合わせメッセージ
+  contactMessages: defineTable({
+    name: v.string(),
+    email: v.string(),
+    subject: v.string(),
+    message: v.string(),
+    category: v.string(),
+    status: v.union(v.literal("new"), v.literal("in_progress"), v.literal("resolved")),
+    response: v.optional(v.string()),
+    submittedAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_submitted_at", ["submittedAt"]),
+
+  // よくある質問
+  faqItems: defineTable({
+    question: v.string(),
+    answer: v.string(),
+    category: v.string(),
+    order: v.number(),
+    isPublished: v.boolean(),
+    createdBy: v.id("users"),
+    updatedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_category_and_order", ["category", "order"])
+    .index("by_published", ["isPublished"])
+    .index("by_created_at", ["createdAt"]),
 };
 
 export default defineSchema({

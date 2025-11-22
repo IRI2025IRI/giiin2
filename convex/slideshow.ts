@@ -11,10 +11,19 @@ export const list = query({
       .collect();
 
     return Promise.all(
-      slides.map(async (slide) => ({
-        ...slide,
-        imageUrl: slide.imageId ? await ctx.storage.getUrl(slide.imageId) : null,
-      }))
+      slides.map(async (slide) => {
+        let imageUrl = slide.imageUrl || null;
+        
+        // ストレージIDがある場合は署名付きURLを取得
+        if (slide.imageId) {
+          imageUrl = await ctx.storage.getUrl(slide.imageId);
+        }
+        
+        return {
+          ...slide,
+          imageUrl,
+        };
+      })
     );
   },
 });
@@ -31,10 +40,19 @@ export const listActive = query({
     const sortedSlides = slides.sort((a, b) => a.order - b.order);
 
     return Promise.all(
-      sortedSlides.map(async (slide) => ({
-        ...slide,
-        imageUrl: slide.imageId ? await ctx.storage.getUrl(slide.imageId) : null,
-      }))
+      sortedSlides.map(async (slide) => {
+        let imageUrl = slide.imageUrl || null;
+        
+        // ストレージIDがある場合は署名付きURLを取得
+        if (slide.imageId) {
+          imageUrl = await ctx.storage.getUrl(slide.imageId);
+        }
+        
+        return {
+          ...slide,
+          imageUrl,
+        };
+      })
     );
   },
 });
@@ -43,6 +61,7 @@ export const create = mutation({
   args: {
     title: v.string(),
     description: v.string(),
+    imageUrl: v.optional(v.string()),
     imageId: v.optional(v.id("_storage")),
     linkUrl: v.optional(v.string()),
     backgroundColor: v.string(),
@@ -58,6 +77,7 @@ export const create = mutation({
     return await ctx.db.insert("slideshowSlides", {
       title: args.title,
       description: args.description,
+      imageUrl: args.imageUrl,
       imageId: args.imageId,
       linkUrl: args.linkUrl,
       backgroundColor: args.backgroundColor,
@@ -73,6 +93,7 @@ export const update = mutation({
     id: v.id("slideshowSlides"),
     title: v.string(),
     description: v.string(),
+    imageUrl: v.optional(v.string()),
     imageId: v.optional(v.id("_storage")),
     linkUrl: v.optional(v.string()),
     backgroundColor: v.string(),
@@ -88,6 +109,7 @@ export const update = mutation({
     const updateData: any = {
       title: args.title,
       description: args.description,
+      imageUrl: args.imageUrl,
       linkUrl: args.linkUrl,
       backgroundColor: args.backgroundColor,
       order: args.order,

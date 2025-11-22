@@ -1,147 +1,163 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { Slideshow } from "./Slideshow";
+
 import { TopMembers } from "./TopMembers";
 import { RecentQuestions } from "./RecentQuestions";
-import { Slideshow } from "./Slideshow";
 
 interface DashboardProps {
   onMemberClick: (memberId: Id<"councilMembers">) => void;
   onQuestionClick: (questionId: Id<"questions">) => void;
   onNewsClick: (newsId: Id<"news">) => void;
+  onNavigateToMembers: () => void;
+  onNavigateToQuestions: () => void;
+  onNavigateToRankings: () => void;
 }
 
-export function Dashboard({ onMemberClick, onQuestionClick, onNewsClick }: DashboardProps) {
-  const stats = useQuery(api.questions.getStats);
-  const categories = useQuery(api.questions.getCategories);
+export function Dashboard({ onMemberClick, onQuestionClick, onNewsClick, onNavigateToMembers, onNavigateToQuestions, onNavigateToRankings }: DashboardProps) {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   const recentNews = useQuery(api.news.getRecent, { limit: 3 });
 
-  if (!stats) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-gray-600">読み込み中...</span>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
 
-  const categoryColors = [
-    "from-blue-500 to-blue-600",
-    "from-green-500 to-green-600", 
-    "from-orange-500 to-orange-600",
-    "from-purple-500 to-purple-600",
-    "from-pink-500 to-pink-600",
-    "from-indigo-500 to-indigo-600",
-    "from-red-500 to-red-600",
-    "from-yellow-500 to-yellow-600"
-  ];
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Slideshow Section */}
-      <Slideshow />
+    <div className="space-y-6 sm:space-y-8 animate-fadeIn">
+      {/* Hero Section with Slideshow */}
+      <div className="relative">
+        <Slideshow />
+        
+        {/* Welcome Message Overlay - pointer-events-none to allow clicks through */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-xl pointer-events-none">
+          <div className="text-center text-white p-4 sm:p-8 pointer-events-auto">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold mb-2 sm:mb-4 amano-text-glow animate-amano-float">
+              ようこそ GIIIN/ギイーンへ
+            </h2>
+            <div className="text-xs sm:text-sm text-gray-300 space-y-1">
+            </div>
+          </div>
+        </div>
+      </div>
+
+
 
       {/* Recent News */}
       {recentNews && recentNews.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center">
-            <span className="text-xl sm:text-2xl mr-2">📢</span>
-            最新のお知らせ
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {recentNews.map((news) => (
+        <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 amano-crystal-border">
+          <h3 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-4 sm:mb-6 amano-text-glow">
+            📢 最新のお知らせ
+          </h3>
+          <div className="space-y-3 sm:space-y-4">
+            {recentNews.map((news, index) => (
               <div
                 key={news._id}
+                className="p-3 sm:p-4 amano-bg-glass rounded-lg border border-purple-500/20 hover:border-yellow-400/50 transition-all duration-300 cursor-pointer transform hover:scale-[1.02] animate-slideUp"
+                style={{ animationDelay: `${index * 100}ms` }}
                 onClick={() => onNewsClick(news._id)}
-                className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-300 cursor-pointer group"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                    {news.category}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {new Date(news.publishDate).toLocaleDateString('ja-JP')}
-                  </span>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-200 mb-1 line-clamp-1 text-sm sm:text-base">
+                      {news.title}
+                    </h4>
+                    <p className="text-gray-400 text-xs sm:text-sm line-clamp-2">
+                      {news.content}
+                    </p>
+                    <p className="text-cyan-400 text-xs mt-2">
+                      {new Date(news.publishDate).toLocaleDateString('ja-JP')}
+                    </p>
+                  </div>
+                  <span className="text-yellow-400 ml-2 flex-shrink-0">📰</span>
                 </div>
-                <h3 className="font-semibold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 text-sm sm:text-base">
-                  {news.title}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
-                  {news.content}
-                </p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Top Members and Categories - Side by Side on Desktop */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         {/* Top Members */}
-        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp xl:h-[600px] xl:flex xl:flex-col">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 flex items-center">
-            <span className="text-xl sm:text-2xl mr-2">🏆</span>
-            質問数の多い議員
-          </h2>
-          <div className="xl:flex-1 xl:overflow-hidden">
-            <TopMembers onMemberClick={onMemberClick} />
-          </div>
-        </div>
-
-        {/* Question Categories Chart */}
-        {categories && categories.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp xl:h-[600px] xl:flex xl:flex-col">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 flex items-center">
-              <span className="text-xl sm:text-2xl mr-2">📊</span>
-              質問カテゴリー別統計
-            </h2>
-            <div className="xl:flex-1 space-y-2 xl:overflow-hidden">
-              {categories.slice(0, 8).map((category, index) => {
-                const maxCount = Math.max(...categories.map(c => c.count));
-                const percentage = (category.count / maxCount) * 100;
-                const colorClass = categoryColors[index % categoryColors.length];
-                
-                return (
-                  <div key={category.name} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs sm:text-sm font-medium text-gray-700 truncate flex-1 pr-2">
-                        {category.name}
-                      </div>
-                      <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
-                        <span className="font-bold text-gray-600">{category.count}件</span>
-                        <span className="text-gray-500">
-                          ({Math.round((category.count / stats.totalQuestions) * 100)}%)
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
-                      <div 
-                        className={`h-full bg-gradient-to-r ${colorClass} rounded-full transition-all duration-1000 ease-out`}
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs font-bold text-white drop-shadow-sm">
-                          {category.count}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <TopMembers onMemberClick={onMemberClick} />
+        
+        {/* Recent Questions */}
+        <RecentQuestions onQuestionClick={onQuestionClick} />
       </div>
 
-      {/* Recent Questions */}
-      <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center">
-          <span className="text-xl sm:text-2xl mr-2">💬</span>
-          最近の質問
-        </h2>
-        <RecentQuestions onQuestionClick={onQuestionClick} />
+      {/* Data Source Attribution */}
+      <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 text-center">
+        <h3 className="text-lg sm:text-xl font-bold text-yellow-400 mb-4 amano-text-glow">
+          📊 データ出典について
+        </h3>
+        <div className="text-gray-300 text-sm sm:text-base space-y-2">
+          <p>
+            本サイトで使用している議会情報・議員情報は、
+            <a 
+              href="https://www.city.mihara.hiroshima.jp/site/gikai/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-cyan-400 hover:text-yellow-400 underline hover:no-underline transition-colors mx-1"
+            >
+              三原市議会公式サイト
+            </a>
+            から取得しています。
+          </p>
+          <p className="text-xs text-gray-400">
+            ※ 議員の写真・プロフィール情報等の著作権は三原市に帰属します
+          </p>
+          <p className="text-xs text-gray-400">
+            ※ 最新の正確な情報については、必ず公式サイトをご確認ください
+          </p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 text-center hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer group amano-crystal-border"
+             onClick={onNavigateToMembers}>
+          <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 group-hover:animate-bounce">👥</div>
+          <h3 className="text-lg sm:text-xl font-bold text-yellow-400 mb-2 amano-text-glow">議員一覧</h3>
+          <p className="text-gray-300 text-sm">三原市議会議員の詳細情報を確認</p>
+        </div>
+
+        <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 text-center hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer group amano-crystal-border"
+             onClick={onNavigateToQuestions}>
+          <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 group-hover:animate-bounce">📜</div>
+          <h3 className="text-lg sm:text-xl font-bold text-yellow-400 mb-2 amano-text-glow">質問・回答</h3>
+          <p className="text-gray-300 text-sm">議会での質問と回答を検索・閲覧</p>
+        </div>
+
+        <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 text-center hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer group amano-crystal-border sm:col-span-2 lg:col-span-1"
+             onClick={onNavigateToRankings}>
+          <div className="text-3xl sm:text-4xl mb-3 sm:mb-4 group-hover:animate-bounce">🔮</div>
+          <h3 className="text-lg sm:text-xl font-bold text-yellow-400 mb-2 amano-text-glow">統計情報</h3>
+          <p className="text-gray-300 text-sm">議員活動の統計とランキング</p>
+        </div>
       </div>
     </div>
   );

@@ -15,9 +15,12 @@ import type {
 } from "convex/server";
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as contact from "../contact.js";
 import type * as councilMembers from "../councilMembers.js";
 import type * as emailActions from "../emailActions.js";
 import type * as emailAuth from "../emailAuth.js";
+import type * as faq from "../faq.js";
+import type * as faqSampleData from "../faqSampleData.js";
 import type * as http from "../http.js";
 import type * as likes from "../likes.js";
 import type * as news from "../news.js";
@@ -37,9 +40,12 @@ import type * as slideshow from "../slideshow.js";
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
+  contact: typeof contact;
   councilMembers: typeof councilMembers;
   emailActions: typeof emailActions;
   emailAuth: typeof emailAuth;
+  faq: typeof faq;
+  faqSampleData: typeof faqSampleData;
   http: typeof http;
   likes: typeof likes;
   news: typeof news;

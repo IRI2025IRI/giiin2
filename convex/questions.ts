@@ -199,6 +199,32 @@ export const getRecent = query({
   },
 });
 
+export const getByMemberId = query({
+  args: { memberId: v.id("councilMembers") },
+  handler: async (ctx, args) => {
+    const questions = await ctx.db
+      .query("questions")
+      .withIndex("by_council_member", (q) => q.eq("councilMemberId", args.memberId))
+      .order("desc")
+      .collect();
+
+    return Promise.all(
+      questions.map(async (question) => {
+        const responses = await ctx.db
+          .query("responses")
+          .withIndex("by_question", (q) => q.eq("questionId", question._id))
+          .collect();
+
+        return {
+          ...question,
+          responses,
+          responseCount: responses.length,
+        };
+      })
+    );
+  },
+});
+
 export const getPopular = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {

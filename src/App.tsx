@@ -14,17 +14,28 @@ import { News } from "./components/News";
 import { AdminPanel } from "./components/AdminPanel";
 import { Rankings } from "./components/Rankings";
 import { TermsAndPrivacy } from "./components/TermsAndPrivacy";
+import { Contact } from "./components/Contact";
+import { FAQ } from "./components/FAQ";
 import { ScrollToTopButton } from "./components/ScrollToTopButton";
 import { safeScrollTo } from "./lib/utils";
+import { useUrlNavigation } from "./hooks/useUrlNavigation";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isEmailVerificationModalOpen, setIsEmailVerificationModalOpen] = useState(false);
-  const [selectedMemberId, setSelectedMemberId] = useState<Id<"councilMembers"> | null>(null);
-  const [selectedQuestionId, setSelectedQuestionId] = useState<Id<"questions"> | null>(null);
-  const [selectedNewsId, setSelectedNewsId] = useState<Id<"news"> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // URL navigation hook
+  const {
+    activeTab,
+    selectedMemberId,
+    selectedQuestionId,
+    selectedNewsId,
+    setActiveTab,
+    setSelectedMemberId,
+    setSelectedQuestionId,
+    setSelectedNewsId,
+  } = useUrlNavigation();
   
   const user = useQuery(api.auth.loggedInUser);
   const isAdmin = useQuery(api.admin.isAdmin);
@@ -85,7 +96,6 @@ export default function App() {
 
   const handleMemberClick = (memberId: Id<"councilMembers">) => {
     setSelectedMemberId(memberId);
-    setActiveTab("members");
     // ページトップにスクロール
     safeScrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -95,8 +105,6 @@ export default function App() {
     console.log("App: User Agent:", navigator.userAgent);
     
     // 質問詳細ページに遷移
-    setSelectedNewsId(null);
-    setActiveTab("questions");
     setSelectedQuestionId(questionId);
     
     // ページトップにスクロール
@@ -106,16 +114,12 @@ export default function App() {
     if (navigator.userAgent.includes('Line')) {
       setTimeout(() => {
         setSelectedQuestionId(questionId);
-        setActiveTab("questions");
       }, 100);
     }
   };
 
   const handleNewsClick = (newsId: Id<"news">) => {
-    setSelectedMemberId(null);
-    setSelectedQuestionId(null);
     setSelectedNewsId(newsId);
-    setActiveTab("news");
   };
 
   const handleBackToMembers = () => {
@@ -140,6 +144,8 @@ export default function App() {
     { id: "questions", label: "質問・回答", icon: "📜", shortLabel: "質問" },
     { id: "rankings", label: "統計情報", icon: "🔮", shortLabel: "統計" },
     { id: "news", label: "お知らせ", icon: "✨", shortLabel: "お知らせ" },
+    { id: "faq", label: "よくある質問", icon: "❓", shortLabel: "FAQ" },
+    { id: "contact", label: "お問い合わせ", icon: "📧", shortLabel: "問合せ" },
   ];
 
   // Add admin tab only for admin users
@@ -158,7 +164,14 @@ export default function App() {
     });
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard onMemberClick={handleMemberClick} onQuestionClick={handleQuestionClick} onNewsClick={handleNewsClick} />;
+        return <Dashboard 
+          onMemberClick={handleMemberClick} 
+          onQuestionClick={handleQuestionClick} 
+          onNewsClick={handleNewsClick}
+          onNavigateToMembers={() => setActiveTab("members")}
+          onNavigateToQuestions={() => setActiveTab("questions")}
+          onNavigateToRankings={() => setActiveTab("rankings")}
+        />;
       case "members":
         if (selectedMemberId) {
           return <CouncilMemberDetail memberId={selectedMemberId} onBack={handleBackToMembers} onQuestionClick={handleQuestionClick} />;
@@ -191,12 +204,23 @@ export default function App() {
         return <Rankings onMemberClick={handleMemberClick} onQuestionClick={handleQuestionClick} />;
       case "news":
         return <News selectedNewsId={selectedNewsId} onNewsSelect={handleNewsSelect} />;
+      case "faq":
+        return <FAQ onNavigateToContact={() => setActiveTab("contact")} />;
+      case "contact":
+        return <Contact />;
       case "terms":
         return <TermsAndPrivacy />;
       case "admin":
         return isAdmin ? <AdminPanel /> : <div>アクセス権限がありません</div>;
       default:
-        return <Dashboard onMemberClick={handleMemberClick} onQuestionClick={handleQuestionClick} onNewsClick={handleNewsClick} />;
+        return <Dashboard 
+          onMemberClick={handleMemberClick} 
+          onQuestionClick={handleQuestionClick} 
+          onNewsClick={handleNewsClick}
+          onNavigateToMembers={() => setActiveTab("members")}
+          onNavigateToQuestions={() => setActiveTab("questions")}
+          onNavigateToRankings={() => setActiveTab("rankings")}
+        />;
     }
   };
 
@@ -349,10 +373,21 @@ export default function App() {
               </button>
             </div>
             
-            <div className="text-xs sm:text-sm text-gray-400 px-4">
+            <div className="text-xs sm:text-sm text-gray-400 px-4 space-y-2">
               <p>※ このサイトは三原市非公認です。実際のデータは各自治体議会の公式情報をご確認ください。</p>
-              <p className="mt-2">お問い合わせ：info@giiin.info</p>
-              <p className="mt-2">© 2025 GIIIN/ギイーン 議員活動可視化システム</p>
+              <p>
+                ※ 議員情報・議事録データは
+                <a 
+                  href="https://www.city.mihara.hiroshima.jp/site/gikai/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-cyan-400 hover:text-yellow-400 underline hover:no-underline transition-colors mx-1"
+                >
+                  三原市議会公式サイト
+                </a>
+                より取得（著作権：三原市）
+              </p>
+              <p>© 2025 GIIIN/ギイーン</p>
             </div>
           </div>
         </div>

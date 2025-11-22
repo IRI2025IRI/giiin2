@@ -41,8 +41,12 @@ export function TopMembers({ onMemberClick }: TopMembersProps) {
   };
 
   return (
-    <div className="space-y-3">
-      {topMembers.map((item, index) => {
+    <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 amano-crystal-border">
+      <h3 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-4 sm:mb-6 amano-text-glow">
+        🏆 質問数の多い議員
+      </h3>
+      <div className="space-y-3">
+        {topMembers.map((item, index) => {
         if (!item.member) return null;
         const rankInfo = getRankIcon(index);
         return (
@@ -89,6 +93,7 @@ export function TopMembers({ onMemberClick }: TopMembersProps) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

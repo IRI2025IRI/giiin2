@@ -56,7 +56,7 @@ export function Slideshow() {
                 href={currentSlideData.linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block bg-white text-gray-800 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors shadow-lg"
+                className="inline-block bg-white text-gray-800 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors shadow-lg relative z-10"
               >
                 詳細を見る
               </a>
@@ -80,7 +80,7 @@ export function Slideshow() {
                 href={currentSlideData.linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block bg-white text-gray-800 px-3 sm:px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors shadow-lg text-sm sm:text-base"
+                className="inline-block bg-white text-gray-800 px-3 sm:px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors shadow-lg text-sm sm:text-base relative z-10"
               >
                 詳細を見る
               </a>
@@ -89,20 +89,7 @@ export function Slideshow() {
         </div>
       )}
 
-      {/* インジケーター */}
-      {slides.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-colors ${
-                index === currentSlide ? "bg-white" : "bg-white bg-opacity-50"
-              }`}
-            />
-          ))}
-        </div>
-      )}
+
 
       {/* ナビゲーションボタン */}
       {slides.length > 1 && (

@@ -92,8 +92,12 @@ export function RecentQuestions({ onQuestionClick }: RecentQuestionsProps = {}) 
   }
 
   return (
-    <div>
-      {questions.length === 0 ? (
+    <div className="amano-bg-card rounded-xl p-4 sm:p-6 shadow-2xl border border-purple-500/30 amano-crystal-border">
+      <h3 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-4 sm:mb-6 amano-text-glow">
+        📝 最近の質問
+      </h3>
+      <div>
+        {questions.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-4xl mb-4">📝</div>
           <p className="text-gray-500">まだ質問がありません</p>
@@ -107,11 +111,11 @@ export function RecentQuestions({ onQuestionClick }: RecentQuestionsProps = {}) 
                 key={question._id}
                 onClick={() => onQuestionClick?.(question._id)}
                 {...touchHandlers}
-                className="group p-4 border border-gray-200 rounded-lg hover:shadow-md transition-all duration-300 cursor-pointer hover:border-blue-300"
+                className="group p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-300 cursor-pointer hover:border-blue-300"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center space-x-2 text-xs text-gray-600">
+                  <div className="flex items-center space-x-2 text-xs text-gray-700">
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
                       {question.category}
                     </span>
@@ -140,12 +144,12 @@ export function RecentQuestions({ onQuestionClick }: RecentQuestionsProps = {}) 
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-gray-800 font-bold mb-1 group-hover:text-blue-600 transition-colors text-sm sm:text-base leading-tight">
+                    <h4 className="text-gray-900 font-bold mb-1 group-hover:text-blue-600 transition-colors text-sm sm:text-base leading-tight">
                       {question.title}
                     </h4>
-                    <p className="text-gray-600 font-medium text-xs sm:text-sm mb-2">{question.memberName}</p>
+                    <p className="text-gray-700 font-medium text-xs sm:text-sm mb-2">{question.memberName}</p>
                     {question.memberParty && (
-                      <p className="text-gray-500 text-xs">{question.memberParty}</p>
+                      <p className="text-gray-600 text-xs">{question.memberParty}</p>
                     )}
                   </div>
                 </div>
@@ -181,6 +185,7 @@ export function RecentQuestions({ onQuestionClick }: RecentQuestionsProps = {}) 
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
