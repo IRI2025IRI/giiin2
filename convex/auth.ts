@@ -42,3 +42,35 @@ export const getUserByEmail = query({
     return user;
   },
 });
+
+// サインアップ可能性チェック
+export const checkSignUpAvailability = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .first();
+    
+    if (existingUser) {
+      return { available: false, reason: "user_exists" };
+    }
+
+    try {
+      const authAccounts = await ctx.db.query("authAccounts").collect();
+      const existingAuthAccount = authAccounts.find(account => 
+        account.provider === "password" && 
+        (account.providerAccountId === args.email ||
+         (account.providerAccountId && account.providerAccountId.includes(args.email)))
+      );
+      
+      if (existingAuthAccount) {
+        return { available: false, reason: "auth_account_exists" };
+      }
+    } catch (error) {
+      console.log("Auth account check failed:", error);
+    }
+
+    return { available: true };
+  },
+});

@@ -23,8 +23,8 @@ http.route({
       // トークンを使ってメール認証を実行
       const result = await ctx.runMutation(api.emailAuth.verifyEmailToken, { token });
       
-      // アプリのベースURLを取得
-      const appUrl = process.env.CONVEX_SITE_URL || `https://${process.env.CONVEX_CLOUD_URL?.replace('https://', '')}`;
+      // アプリのベースURLを環境変数から取得
+      const appUrl = process.env.SITE_URL || "https://giiin.info";
       
       if (result.success) {
         // 認証成功時のHTMLレスポンス
@@ -223,7 +223,7 @@ http.route({
     } catch (error) {
       console.error("Email verification error:", error);
       
-      const appUrl = process.env.CONVEX_SITE_URL || `https://${process.env.CONVEX_CLOUD_URL?.replace('https://', '')}`;
+      const appUrl = process.env.SITE_URL || "https://giiin.info";
       
       const errorHtml = `
         <!DOCTYPE html>
@@ -512,7 +512,7 @@ http.route({
               const result = await response.json();
               
               if (result.success) {
-                messageDiv.innerHTML = '<div class="success">パスワードが正常に更新されました。アプリに戻ってログインしてください。</div>';
+                messageDiv.innerHTML = '<div class="success">パスワードが正常に更新されました。<br><a href="' + (process.env.SITE_URL || "https://giiin.info") + '/" class="button" style="margin-top: 10px; display: inline-block;">アプリに戻る</a></div>';
                 document.getElementById('resetForm').style.display = 'none';
               } else {
                 messageDiv.innerHTML = '<div class="error">' + (result.error || 'パスワードの更新に失敗しました。') + '</div>';

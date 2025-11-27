@@ -28,6 +28,7 @@ import type * as questions from "../questions.js";
 import type * as router from "../router.js";
 import type * as sampleData from "../sampleData.js";
 import type * as slideshow from "../slideshow.js";
+import type * as userDemographics from "../userDemographics.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   router: typeof router;
   sampleData: typeof sampleData;
   slideshow: typeof slideshow;
+  userDemographics: typeof userDemographics;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

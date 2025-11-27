@@ -149,6 +149,34 @@ const applicationTables = {
     .index("by_category_and_order", ["category", "order"])
     .index("by_published", ["isPublished"])
     .index("by_created_at", ["createdAt"]),
+
+  // ユーザー属性情報
+  userDemographics: defineTable({
+    userId: v.id("users"),
+    ageGroup: v.union(
+      v.literal("10代"),
+      v.literal("20代"),
+      v.literal("30代"),
+      v.literal("40代"),
+      v.literal("50代"),
+      v.literal("60代"),
+      v.literal("70代以上")
+    ),
+    gender: v.union(
+      v.literal("男性"),
+      v.literal("女性"),
+      v.literal("その他"),
+      v.literal("回答しない")
+    ),
+    region: v.union(
+      v.literal("三原市民"),
+      v.literal("その他市民")
+    ),
+    registeredAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_age_group", ["ageGroup"])
+    .index("by_gender", ["gender"])
+    .index("by_region", ["region"]),
 };
 
 export default defineSchema({
