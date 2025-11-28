@@ -15,6 +15,17 @@ export const sendVerificationEmail = action({
   },
   handler: async (ctx, args) => {
     try {
+      // ユーザーIDが提供されていない場合、メールアドレスから検索
+      let userId = args.userId;
+      if (!userId) {
+        const user = await ctx.runQuery(internal.emailAuth.getUserByEmail, { 
+          email: args.email 
+        });
+        if (user) {
+          userId = user._id;
+        }
+      }
+
       // トークンを生成
       const token = crypto.randomBytes(32).toString('hex');
       const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24時間後
@@ -25,7 +36,7 @@ export const sendVerificationEmail = action({
         token,
         type: "verification" as const,
         expiresAt,
-        userId: args.userId
+        userId
       });
 
       // 認証URLを生成（Convexのデプロイメントドメインを使用）

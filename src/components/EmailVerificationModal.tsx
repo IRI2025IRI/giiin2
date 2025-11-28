@@ -32,13 +32,13 @@ export function EmailVerificationModal({ isOpen, onClose, userEmail }: EmailVeri
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+      <div className="amano-bg-card rounded-xl shadow-2xl max-w-md w-full amano-crystal-border">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">メール認証が必要です</h2>
+            <h2 className="text-xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">メール認証が必要です</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+              className="text-gray-400 hover:text-yellow-400 text-2xl font-bold transition-colors"
             >
               ×
             </button>
@@ -46,17 +46,17 @@ export function EmailVerificationModal({ isOpen, onClose, userEmail }: EmailVeri
 
           <div className="text-center">
             <div className="text-6xl mb-4">📧</div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            <h3 className="text-lg font-semibold text-yellow-400 mb-4 amano-text-glow">
               アカウントの有効化が必要です
             </h3>
-            <p className="text-gray-600 text-sm mb-6">
+            <p className="text-gray-300 text-sm mb-6">
               {userEmail || "ご登録のメールアドレス"} に送信された認証メールを確認し、
               <br />
               メール内のリンクをクリックしてアカウントを有効化してください。
             </p>
             
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-              <p className="text-yellow-800 text-sm">
+            <div className="amano-bg-glass border border-yellow-400 rounded-lg p-4 mb-6 amano-crystal-border">
+              <p className="text-yellow-300 text-sm amano-text-glow">
                 ⚠️ メール認証が完了するまで、一部の機能がご利用いただけません。<br />
                 メールが届かない場合は、迷惑メールフォルダもご確認ください。
               </p>
@@ -66,7 +66,7 @@ export function EmailVerificationModal({ isOpen, onClose, userEmail }: EmailVeri
               <button
                 onClick={handleResendEmail}
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-bold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full auth-button"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -80,7 +80,7 @@ export function EmailVerificationModal({ isOpen, onClose, userEmail }: EmailVeri
               
               <button
                 onClick={onClose}
-                className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-all duration-300"
+                className="w-full amano-bg-glass text-gray-300 py-3 rounded-lg font-medium hover:bg-gradient-to-r hover:from-purple-600 hover:to-blue-600 hover:text-white transition-all duration-300 amano-crystal-border"
               >
                 後で認証する
               </button>

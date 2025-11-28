@@ -1,115 +1,130 @@
 import { useState } from "react";
-import { useMutation, useAction, useQuery } from "convex/react";
+import { useMutation, useAction } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
+import { toast } from "sonner";
 
 interface SignUpFormProps {
   onSuccess?: () => void;
   onSwitchToSignIn?: () => void;
+  onShowTerms?: () => void;
 }
 
-export function SignUpForm({ onSuccess, onSwitchToSignIn }: SignUpFormProps) {
+export function SignUpForm({ onSuccess, onSwitchToSignIn, onShowTerms }: SignUpFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [ageGroup, setAgeGroup] = useState("");
   const [gender, setGender] = useState("");
   const [region, setRegion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [step, setStep] = useState(1); // 1: 基本情報, 2: 属性情報
 
-  const signIn = useAction(api.auth.signIn);
-  const saveDemographics = useMutation(api.userDemographics.saveDemographics);
-  const checkAvailability = useQuery(
-    api.auth.checkSignUpAvailability,
-    email ? { email } : "skip"
-  );
+  const { signIn } = useAuthActions();
+  const saveDemographics = useMutation(api.userDemographics.create);
+  const sendVerificationEmail = useAction(api.emailActions.sendVerificationEmail);
 
-  const handleBasicInfoSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !name) {
-      setError("すべての項目を入力してください");
+    
+    if (!email || !password || !name || !ageGroup || !gender || !region) {
+      toast.error("すべての項目を入力してください");
       return;
     }
 
-    // メールアドレスの可用性をチェック
-    if (checkAvailability && !checkAvailability.available) {
-      if (checkAvailability.reason === "auth_account_exists") {
-        setError("このメールアドレスは認証システムに残っています。管理者にクリーンアップを依頼してください。");
-      } else {
-        setError("このメールアドレスは既に使用されています");
-      }
+    if (password !== confirmPassword) {
+      toast.error("パスワードが一致しません");
+      return;
+    }
+
+    if (password.length < 8) {
+      toast.error("パスワードは8文字以上で入力してください");
       return;
     }
 
     setIsLoading(true);
-    setError("");
 
     try {
-      await signIn({ 
-        provider: "password", 
-        params: { email, password, name, flow: "signUp" }
-      });
-      setStep(2); // 属性情報入力ステップに進む
-    } catch (err) {
-      console.error("Sign up error:", err);
-      let errorMessage = "アカウント作成に失敗しました";
-      
-      if (err instanceof Error) {
-        if (err.message.includes("already exists") || err.message.includes("既に")) {
-          errorMessage = "このメールアドレスは既に使用されています。管理者にお問い合わせください。";
-        } else {
-          errorMessage = err.message;
-        }
+      // FormDataを作成してConvex Authに渡す
+      const formData = new FormData();
+      formData.set("email", email);
+      formData.set("password", password);
+      formData.set("name", name);
+      formData.set("flow", "signUp");
+
+      // Convex Authを使用してアカウント作成
+      const result = await signIn("password", formData);
+      console.log("SignIn result:", result);
+
+      // 少し待ってからユーザー情報を取得し、処理を実行
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // アカウント作成成功後、属性情報を保存
+      try {
+        await saveDemographics({
+          ageGroup: ageGroup as any,
+          gender: gender as any,
+          region: region as any,
+        });
+      } catch (demoError) {
+        console.error("Demographics save error:", demoError);
+        // 属性情報の保存に失敗してもアカウント作成は成功とする
       }
-      
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleDemographicsSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ageGroup || !gender || !region) {
-      setError("すべての項目を選択してください");
-      return;
-    }
+      // メール認証を送信
+      try {
+        await sendVerificationEmail({ email });
+        toast.success("アカウントが作成されました！認証メールをご確認ください。");
+      } catch (emailError) {
+        console.error("Email verification error:", emailError);
+        toast.success("アカウントが作成されました。");
+        toast.warning("認証メールの送信に失敗しました。後でお試しください。");
+      }
 
-    setIsLoading(true);
-    setError("");
-
-    try {
-      await saveDemographics({
-        ageGroup: ageGroup as any,
-        gender: gender as any,
-        region: region as any,
-      });
       onSuccess?.();
-    } catch (err) {
-      console.error("Demographics save error:", err);
-      setError(err instanceof Error ? err.message : "属性情報の保存に失敗しました");
+    } catch (error: any) {
+      console.error("Sign up error:", error);
+      
+      // より詳細なエラーメッセージを表示
+      if (error.message?.includes("already exists") || error.message?.includes("ACCOUNT_ALREADY_EXISTS")) {
+        toast.error("このメールアドレスは既に使用されています");
+      } else if (error.message?.includes("Invalid email")) {
+        toast.error("メールアドレスの形式が正しくありません");
+      } else if (error.message?.includes("Password")) {
+        toast.error("パスワードの形式が正しくありません");
+      } else if (error.message?.includes("Name")) {
+        toast.error("名前の入力に問題があります");
+      } else {
+        // デバッグ用に詳細なエラーメッセージを表示
+        console.error("Detailed error:", error);
+        toast.error("アカウント作成中にエラーが発生しました。しばらく時間をおいて再度お試しください。");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (step === 1) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
-            新規アカウント作成
-          </h2>
-          <p className="text-gray-300 mt-2 text-sm">
-            ステップ 1/2: 基本情報を入力してください
-          </p>
-        </div>
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
+          新規アカウント作成
+        </h2>
+        <p className="text-gray-300 mt-2 text-sm">
+          GIIIN/ギイーンへようこそ！アカウントを作成して議員活動を見える化しましょう。
+        </p>
+      </div>
 
-        <form onSubmit={handleBasicInfoSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* 基本情報 */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-yellow-400 amano-text-glow border-b border-purple-500 pb-2">
+            基本情報
+          </h3>
+          
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
-              お名前 *
+              表示名（ニックネーム等） <span className="text-red-400">*</span>
             </label>
             <input
               id="name"
@@ -117,14 +132,14 @@ export function SignUpForm({ onSuccess, onSwitchToSignIn }: SignUpFormProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="auth-input-field"
-              placeholder="お名前を入力してください"
+              placeholder="例：太郎、たろう、Taro など"
               required
             />
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-              メールアドレス *
+              メールアドレス <span className="text-red-400">*</span>
             </label>
             <input
               id="email"
@@ -132,26 +147,14 @@ export function SignUpForm({ onSuccess, onSwitchToSignIn }: SignUpFormProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="auth-input-field"
-              placeholder="メールアドレスを入力してください"
+              placeholder="example@email.com"
               required
             />
-            {email && checkAvailability && !checkAvailability.available && (
-              <p className="text-xs text-red-400 mt-1">
-                {checkAvailability.reason === "auth_account_exists" 
-                  ? "認証システムに残っています（管理者にクリーンアップを依頼）" 
-                  : "このメールアドレスは既に使用されています"}
-              </p>
-            )}
-            {email && checkAvailability && checkAvailability.available && (
-              <p className="text-xs text-green-400 mt-1">
-                このメールアドレスは使用可能です
-              </p>
-            )}
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-              パスワード *
+              パスワード <span className="text-red-400">*</span>
             </label>
             <input
               id="password"
@@ -159,157 +162,143 @@ export function SignUpForm({ onSuccess, onSwitchToSignIn }: SignUpFormProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="auth-input-field"
-              placeholder="パスワードを入力してください"
+              placeholder="8文字以上で入力"
               required
-              minLength={6}
+              minLength={8}
             />
-            <p className="text-xs text-gray-400 mt-1">
-              6文字以上で入力してください
-            </p>
           </div>
 
-          {error && (
-            <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg text-sm">
-              {error}
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+              パスワード（確認） <span className="text-red-400">*</span>
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="auth-input-field"
+              placeholder="パスワードを再入力"
+              required
+            />
+          </div>
+        </div>
+
+        {/* 属性情報 */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-yellow-400 amano-text-glow border-b border-purple-500 pb-2">
+            属性情報
+          </h3>
+          <p className="text-xs text-gray-400">
+            ※ より良いサービス提供のため、統計情報として活用させていただきます
+          </p>
+
+          <div>
+            <label htmlFor="ageGroup" className="block text-sm font-medium text-gray-300 mb-2">
+              年代 <span className="text-red-400">*</span>
+            </label>
+            <select
+              id="ageGroup"
+              value={ageGroup}
+              onChange={(e) => setAgeGroup(e.target.value)}
+              className="auth-input-field"
+              required
+            >
+              <option value="">年代を選択してください</option>
+              <option value="10代">10代</option>
+              <option value="20代">20代</option>
+              <option value="30代">30代</option>
+              <option value="40代">40代</option>
+              <option value="50代">50代</option>
+              <option value="60代">60代</option>
+              <option value="70代以上">70代以上</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="gender" className="block text-sm font-medium text-gray-300 mb-2">
+              性別 <span className="text-red-400">*</span>
+            </label>
+            <select
+              id="gender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="auth-input-field"
+              required
+            >
+              <option value="">性別を選択してください</option>
+              <option value="男性">男性</option>
+              <option value="女性">女性</option>
+              <option value="その他">その他</option>
+              <option value="回答しない">回答しない</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="region" className="block text-sm font-medium text-gray-300 mb-2">
+              地域 <span className="text-red-400">*</span>
+            </label>
+            <select
+              id="region"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="auth-input-field"
+              required
+            >
+              <option value="">地域を選択してください</option>
+              <option value="三原市民">三原市民</option>
+              <option value="その他市民">その他市民</option>
+            </select>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="auth-button"
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>作成中...</span>
             </div>
+          ) : (
+            "アカウントを作成"
           )}
+        </button>
+      </form>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="auth-button"
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>作成中...</span>
-              </div>
-            ) : (
-              "次へ"
-            )}
-          </button>
-        </form>
-
-        <div className="text-center">
+      <div className="text-center">
+        <p className="text-gray-400 text-sm">
+          すでにアカウントをお持ちですか？{" "}
           <button
             onClick={onSwitchToSignIn}
-            className="text-cyan-400 hover:text-yellow-400 text-sm underline hover:no-underline transition-colors"
+            className="text-cyan-400 hover:text-yellow-400 font-medium underline hover:no-underline transition-colors"
           >
-            既にアカウントをお持ちの方はこちら
+            ログインはこちら
           </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
-          属性情報の入力
-        </h2>
-        <p className="text-gray-300 mt-2 text-sm">
-          ステップ 2/2: 統計データ作成のため、以下の情報をお聞かせください
         </p>
       </div>
 
-      <form onSubmit={handleDemographicsSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="ageGroup" className="block text-sm font-medium text-gray-300 mb-2">
-            年代 *
-          </label>
-          <select
-            id="ageGroup"
-            value={ageGroup}
-            onChange={(e) => setAgeGroup(e.target.value)}
-            className="auth-input-field"
-            required
-          >
-            <option value="">年代を選択してください</option>
-            <option value="10代">10代</option>
-            <option value="20代">20代</option>
-            <option value="30代">30代</option>
-            <option value="40代">40代</option>
-            <option value="50代">50代</option>
-            <option value="60代">60代</option>
-            <option value="70代以上">70代以上</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="gender" className="block text-sm font-medium text-gray-300 mb-2">
-            性別 *
-          </label>
-          <select
-            id="gender"
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            className="auth-input-field"
-            required
-          >
-            <option value="">性別を選択してください</option>
-            <option value="男性">男性</option>
-            <option value="女性">女性</option>
-            <option value="その他">その他</option>
-            <option value="回答しない">回答しない</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="region" className="block text-sm font-medium text-gray-300 mb-2">
-            地域 *
-          </label>
-          <select
-            id="region"
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            className="auth-input-field"
-            required
-          >
-            <option value="">地域を選択してください</option>
-            <option value="三原市民">三原市民</option>
-            <option value="その他市民">その他市民</option>
-          </select>
-        </div>
-
-        <div className="bg-blue-500/20 border border-blue-500 text-blue-300 px-4 py-3 rounded-lg text-sm">
-          <p className="font-medium mb-1">📊 統計データについて</p>
-          <p>
-            入力いただいた情報は、サイトの利用状況分析や改善のための統計データとして活用させていただきます。
-            個人を特定する情報として使用されることはありません。
-          </p>
-        </div>
-
-        {error && (
-          <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="flex space-x-3">
+      <div className="text-xs text-gray-500 space-y-2 border-t border-gray-600 pt-4">
+        <p>
+          アカウント作成により、
           <button
-            type="button"
-            onClick={() => setStep(1)}
-            className="flex-1 py-3 rounded-lg font-medium border-2 border-gray-500 text-gray-300 hover:border-yellow-400 hover:text-yellow-400 transition-all duration-300"
+            onClick={() => onShowTerms?.()}
+            className="text-cyan-400 hover:text-yellow-400 underline hover:no-underline transition-colors mx-1"
           >
-            戻る
+            利用規約
           </button>
+          および
           <button
-            type="submit"
-            disabled={isLoading}
-            className="flex-1 auth-button"
+            onClick={() => onShowTerms?.()}
+            className="text-cyan-400 hover:text-yellow-400 underline hover:no-underline transition-colors mx-1"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>登録中...</span>
-              </div>
-            ) : (
-              "登録完了"
-            )}
+            プライバシーポリシー
           </button>
-        </div>
-      </form>
+          に同意したものとみなします。
+        </p>
+      </div>
     </div>
   );
 }
