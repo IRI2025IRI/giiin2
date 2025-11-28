@@ -135,7 +135,29 @@ export const getUserByEmail = internalQuery({
   },
 });
 
-// ユーザーのメール認証状態を取得
+// ユーザー作成時にメール認証状態を初期化
+export const initializeEmailStatus = internalMutation({
+  args: {
+    userId: v.id("users"),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // 既存の状態があるかチェック
+    const existing = await ctx.db
+      .query("userEmailStatus")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!existing) {
+      await ctx.db.insert("userEmailStatus", {
+        userId: args.userId,
+        email: args.email,
+        isVerified: false,
+        verificationRequestedAt: Date.now(),
+      });
+    }
+  },
+});
 export const getEmailVerificationStatus = query({
   args: {},
   handler: async (ctx) => {

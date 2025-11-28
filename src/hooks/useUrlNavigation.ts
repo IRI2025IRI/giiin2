@@ -1,141 +1,114 @@
-import { useState, useEffect } from 'react';
-import { Id } from '../../convex/_generated/dataModel';
-
-export interface NavigationState {
-  activeTab: string;
-  selectedMemberId: Id<"councilMembers"> | null;
-  selectedQuestionId: Id<"questions"> | null;
-  selectedNewsId: Id<"news"> | null;
-}
+import { useState, useEffect } from "react";
+import { Id } from "../../convex/_generated/dataModel";
 
 export function useUrlNavigation() {
-  const [state, setState] = useState<NavigationState>({
-    activeTab: "dashboard",
-    selectedMemberId: null,
-    selectedQuestionId: null,
-    selectedNewsId: null,
-  });
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedMemberId, setSelectedMemberId] = useState<Id<"councilMembers"> | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<Id<"questions"> | null>(null);
+  const [selectedNewsId, setSelectedNewsId] = useState<Id<"news"> | null>(null);
 
-  // URLからパラメータを読み取る関数
-  const parseUrlParams = (): NavigationState => {
+  // URLからパラメータを読み取る
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab') || 'dashboard';
-    const memberId = params.get('member') as Id<"councilMembers"> | null;
-    const questionId = params.get('question') as Id<"questions"> | null;
-    const newsId = params.get('news') as Id<"news"> | null;
+    const tab = params.get("tab");
+    const memberId = params.get("member");
+    const questionId = params.get("question");
+    const newsId = params.get("news");
 
-    return {
-      activeTab: tab,
-      selectedMemberId: memberId,
-      selectedQuestionId: questionId,
-      selectedNewsId: newsId,
-    };
-  };
+    if (tab) {
+      // 後方互換性のため "rankings" を "joho" にマッピング
+      if (tab === "rankings") {
+        setActiveTab("joho");
+      } else {
+        setActiveTab(tab);
+      }
+    }
+    if (memberId) {
+      setSelectedMemberId(memberId as Id<"councilMembers">);
+    }
+    if (questionId) {
+      setSelectedQuestionId(questionId as Id<"questions">);
+    }
+    if (newsId) {
+      setSelectedNewsId(newsId as Id<"news">);
+    }
+  }, []);
 
-  // URLパラメータを更新する関数
-  const updateUrl = (newState: Partial<NavigationState>) => {
+  // URLを更新する関数
+  const updateURL = (
+    tab: string,
+    memberId?: Id<"councilMembers"> | null,
+    questionId?: Id<"questions"> | null,
+    newsId?: Id<"news"> | null
+  ) => {
     const params = new URLSearchParams();
     
-    // activeTabは常に設定
-    if (newState.activeTab) {
-      params.set('tab', newState.activeTab);
-    } else if (state.activeTab) {
-      params.set('tab', state.activeTab);
+    // "joho" をそのままURLに保存
+    if (tab !== "dashboard") {
+      params.set("tab", tab);
+    }
+    
+    if (memberId) {
+      params.set("member", memberId);
+    }
+    if (questionId) {
+      params.set("question", questionId);
+    }
+    if (newsId) {
+      params.set("news", newsId);
     }
 
-    // 選択されたアイテムのIDを設定
-    if (newState.selectedMemberId) {
-      params.set('member', newState.selectedMemberId);
+    const newURL = params.toString() ? `?${params.toString()}` : window.location.pathname;
+    window.history.replaceState({}, "", newURL);
+  };
+
+  // タブ変更時にURLを更新
+  const handleSetActiveTab = (tab: string) => {
+    setActiveTab(tab);
+    updateURL(tab, selectedMemberId, selectedQuestionId, selectedNewsId);
+  };
+
+  // メンバー選択時にURLを更新
+  const handleSetSelectedMemberId = (memberId: Id<"councilMembers"> | null) => {
+    setSelectedMemberId(memberId);
+    if (memberId) {
+      setActiveTab("members");
+      updateURL("members", memberId, null, selectedNewsId);
+    } else {
+      updateURL(activeTab, null, selectedQuestionId, selectedNewsId);
     }
-    if (newState.selectedQuestionId) {
-      params.set('question', newState.selectedQuestionId);
+  };
+
+  // 質問選択時にURLを更新
+  const handleSetSelectedQuestionId = (questionId: Id<"questions"> | null) => {
+    setSelectedQuestionId(questionId);
+    if (questionId) {
+      setActiveTab("questions");
+      updateURL("questions", selectedMemberId, questionId, selectedNewsId);
+    } else {
+      updateURL(activeTab, selectedMemberId, null, selectedNewsId);
     }
-    if (newState.selectedNewsId) {
-      params.set('news', newState.selectedNewsId);
+  };
+
+  // ニュース選択時にURLを更新
+  const handleSetSelectedNewsId = (newsId: Id<"news"> | null) => {
+    setSelectedNewsId(newsId);
+    if (newsId) {
+      setActiveTab("news");
+      updateURL("news", selectedMemberId, selectedQuestionId, newsId);
+    } else {
+      updateURL(activeTab, selectedMemberId, selectedQuestionId, null);
     }
-
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
-    window.history.pushState(null, '', newUrl);
-  };
-
-  // 初期化時にURLパラメータを読み取り
-  useEffect(() => {
-    const initialState = parseUrlParams();
-    setState(initialState);
-  }, []);
-
-  // ブラウザの戻る/進むボタンに対応
-  useEffect(() => {
-    const handlePopState = () => {
-      const newState = parseUrlParams();
-      setState(newState);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // 状態更新関数
-  const updateState = (newState: Partial<NavigationState>) => {
-    const updatedState = { ...state, ...newState };
-    setState(updatedState);
-    updateUrl(updatedState);
-  };
-
-  // 個別の更新関数
-  const setActiveTab = (tab: string) => {
-    // タブ変更時は選択されたアイテムをクリア
-    const newState: NavigationState = {
-      activeTab: tab,
-      selectedMemberId: null,
-      selectedQuestionId: null,
-      selectedNewsId: null,
-    };
-    setState(newState);
-    updateUrl(newState);
-  };
-
-  const setSelectedMemberId = (memberId: Id<"councilMembers"> | null) => {
-    const newState = {
-      ...state,
-      selectedMemberId: memberId,
-      selectedQuestionId: null, // 議員選択時は質問選択をクリア
-      selectedNewsId: null,
-      activeTab: memberId ? 'members' : state.activeTab,
-    };
-    setState(newState);
-    updateUrl(newState);
-  };
-
-  const setSelectedQuestionId = (questionId: Id<"questions"> | null) => {
-    const newState = {
-      ...state,
-      selectedQuestionId: questionId,
-      selectedNewsId: null,
-      activeTab: questionId ? 'questions' : state.activeTab,
-    };
-    setState(newState);
-    updateUrl(newState);
-  };
-
-  const setSelectedNewsId = (newsId: Id<"news"> | null) => {
-    const newState = {
-      ...state,
-      selectedNewsId: newsId,
-      selectedMemberId: null,
-      selectedQuestionId: null,
-      activeTab: newsId ? 'news' : state.activeTab,
-    };
-    setState(newState);
-    updateUrl(newState);
   };
 
   return {
-    ...state,
-    setActiveTab,
-    setSelectedMemberId,
-    setSelectedQuestionId,
-    setSelectedNewsId,
-    updateState,
+    activeTab,
+    selectedMemberId,
+    selectedQuestionId,
+    selectedNewsId,
+    setActiveTab: handleSetActiveTab,
+    setSelectedMemberId: handleSetSelectedMemberId,
+    setSelectedQuestionId: handleSetSelectedQuestionId,
+    setSelectedNewsId: handleSetSelectedNewsId,
   };
 }

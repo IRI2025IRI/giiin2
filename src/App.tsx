@@ -142,7 +142,7 @@ export default function App() {
     { id: "dashboard", label: "トップページ", icon: "🏰", shortLabel: "ホーム" },
     { id: "members", label: "議員一覧", icon: "👥", shortLabel: "議員" },
     { id: "questions", label: "質問・回答", icon: "📜", shortLabel: "質問" },
-    { id: "rankings", label: "統計情報", icon: "🔮", shortLabel: "統計" },
+    { id: "joho", label: "統計情報", icon: "🔮", shortLabel: "統計" },
     { id: "news", label: "お知らせ", icon: "✨", shortLabel: "お知らせ" },
     { id: "faq", label: "よくある質問", icon: "❓", shortLabel: "FAQ" },
     { id: "contact", label: "お問い合わせ", icon: "📧", shortLabel: "問合せ" },
@@ -170,7 +170,7 @@ export default function App() {
           onNewsClick={handleNewsClick}
           onNavigateToMembers={() => setActiveTab("members")}
           onNavigateToQuestions={() => setActiveTab("questions")}
-          onNavigateToRankings={() => setActiveTab("rankings")}
+          onNavigateToRankings={() => setActiveTab("joho")}
         />;
       case "members":
         if (selectedMemberId) {
@@ -200,7 +200,7 @@ export default function App() {
         }
         console.log("renderContent: rendering QuestionsList");
         return <QuestionsList onQuestionClick={handleQuestionClick} />;
-      case "rankings":
+      case "joho":
         return <Rankings onMemberClick={handleMemberClick} onQuestionClick={handleQuestionClick} />;
       case "news":
         return <News selectedNewsId={selectedNewsId} onNewsSelect={handleNewsSelect} />;
@@ -219,7 +219,7 @@ export default function App() {
           onNewsClick={handleNewsClick}
           onNavigateToMembers={() => setActiveTab("members")}
           onNavigateToQuestions={() => setActiveTab("questions")}
-          onNavigateToRankings={() => setActiveTab("rankings")}
+          onNavigateToRankings={() => setActiveTab("joho")}
         />;
     }
   };
@@ -396,7 +396,11 @@ export default function App() {
       {/* Login Modal */}
       <LoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
+        onClose={() => setIsLoginModalOpen(false)}
+        onShowTerms={() => {
+          setIsLoginModalOpen(false);
+          setActiveTab("terms");
+        }}
       />
 
       {/* Email Verification Modal */}

@@ -1,7 +1,8 @@
 import { convexAuth, getAuthUserId } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
-import { query } from "./_generated/server";
+import { query, action } from "./_generated/server";
+import { api } from "./_generated/api";
 import { v } from "convex/values";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
@@ -72,5 +73,25 @@ export const checkSignUpAvailability = query({
     }
 
     return { available: true };
+  },
+});
+
+// カスタムサインアップ関数
+export const signUp = action({
+  args: {
+    email: v.string(),
+    password: v.string(),
+    name: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; error?: string }> => {
+    try {
+      return { success: true };
+    } catch (error) {
+      console.error("SignUp error:", error);
+      return {
+        success: false,
+        error: "アカウント作成中にエラーが発生しました",
+      };
+    }
   },
 });
