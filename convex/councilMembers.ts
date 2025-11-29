@@ -2,6 +2,24 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// データベースの状況を確認するためのクエリ
+export const checkDataStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const memberCount = await ctx.db.query("councilMembers").collect();
+    const questionCount = await ctx.db.query("questions").collect();
+    const userCount = await ctx.db.query("users").collect();
+    
+    return {
+      memberCount: memberCount.length,
+      questionCount: questionCount.length,
+      userCount: userCount.length,
+      members: memberCount.slice(0, 3), // 最初の3件のサンプル
+      questions: questionCount.slice(0, 3), // 最初の3件のサンプル
+    };
+  },
+});
+
 export const list = query({
   args: { activeOnly: v.optional(v.boolean()) },
   handler: async (ctx, args) => {

@@ -17,6 +17,7 @@ import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as contact from "../contact.js";
 import type * as councilMembers from "../councilMembers.js";
+import type * as dataMigration from "../dataMigration.js";
 import type * as emailActions from "../emailActions.js";
 import type * as emailAuth from "../emailAuth.js";
 import type * as faq from "../faq.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   contact: typeof contact;
   councilMembers: typeof councilMembers;
+  dataMigration: typeof dataMigration;
   emailActions: typeof emailActions;
   emailAuth: typeof emailAuth;
   faq: typeof faq;

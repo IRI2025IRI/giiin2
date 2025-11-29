@@ -9,6 +9,7 @@ import { SlideshowManagement } from "./SlideshowManagement";
 import { ContactManagement } from "./ContactManagement";
 import { FAQManagement } from "./FAQManagement";
 import { UserStatistics } from "./UserStatistics";
+import { DataMigration } from "./DataMigration";
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState("members");
@@ -27,6 +28,7 @@ export function AdminPanel() {
   // スーパー管理者のみのタブ
   if (isSuperAdmin) {
     tabs.push({ id: "users", label: "ユーザー管理", icon: "👤" });
+    tabs.push({ id: "migration", label: "データ移行", icon: "🔄" });
   }
 
   const renderContent = () => {
@@ -47,6 +49,8 @@ export function AdminPanel() {
         return <FAQManagement />;
       case "statistics":
         return <UserStatistics />;
+      case "migration":
+        return isSuperAdmin ? <DataMigration /> : <div>アクセス権限がありません</div>;
       default:
         return <MemberManagement />;
     }
