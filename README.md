@@ -1,9 +1,9 @@
-# GIIIN
+# project
   
 This is a project built with [Chef](https://chef.convex.dev) using [Convex](https://convex.dev) as its backend.
  You can find docs about Chef with useful information like how to deploy to production [here](https://docs.convex.dev/chef).
   
-This project is connected to the Convex deployment named [`shiny-pony-367`](https://dashboard.convex.dev/d/shiny-pony-367).
+This project is connected to the Convex deployment named [`outgoing-owl-339`](https://dashboard.convex.dev/d/outgoing-owl-339).
   
 ## Project structure
   
