@@ -178,7 +178,7 @@ export function Dashboard({ onMemberClick, onNewsClick, onViewChange, onQuestion
             <div className="text-4xl mb-4">📊</div>
             <h3 className="font-bold text-gray-200 mb-2">2. 分析</h3>
             <p className="text-sm text-gray-400">
-              議員の活動状況をランキングで確認できます
+              議員の活動状況を確認できます
             </p>
           </div>
           <div className="text-center">

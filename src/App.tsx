@@ -313,7 +313,7 @@ function AppContent() {
             <h1 className="text-xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
                GIIIN/ギイーン
             </h1>
-            <p className="text-xs text-gray-400 mt-1">三原市議会情報サイト</p>
+            <p className="text-xs text-gray-400 mt-1">「何してるの？」を身近に。</p>
           </div>
 
           {/* ナビゲーション */}
@@ -401,7 +401,7 @@ function AppContent() {
             >
               利用規約・プライバシーポリシー
             </button>
-            <p className="text-xs text-gray-500 mt-2">© 2024 GIIIN</p>
+            <p className="text-xs text-gray-500 mt-2">©2025 GIIIN</p>
           </div>
         </div>
       </div>
