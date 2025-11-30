@@ -1,5 +1,5 @@
-import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const list = query({
@@ -8,15 +8,20 @@ export const list = query({
     const slides = await ctx.db
       .query("slideshowSlides")
       .withIndex("by_order")
+      .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
 
-    return Promise.all(
+    // 画像URLを取得して返す
+    return await Promise.all(
       slides.map(async (slide) => {
-        let imageUrl = slide.imageUrl || null;
+        let imageUrl = slide.imageUrl;
         
-        // ストレージIDがある場合は署名付きURLを取得
+        // imageIdがある場合は、storageから画像URLを取得
         if (slide.imageId) {
-          imageUrl = await ctx.storage.getUrl(slide.imageId);
+          const url = await ctx.storage.getUrl(slide.imageId);
+          if (url) {
+            imageUrl = url;
+          }
         }
         
         return {
@@ -28,24 +33,40 @@ export const list = query({
   },
 });
 
-export const listActive = query({
+export const listAll = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("認証が必要です");
+    }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     const slides = await ctx.db
       .query("slideshowSlides")
-      .filter((q) => q.eq(q.field("isActive"), true))
+      .withIndex("by_order")
       .collect();
 
-    // 順序でソート
-    const sortedSlides = slides.sort((a, b) => a.order - b.order);
-
-    return Promise.all(
-      sortedSlides.map(async (slide) => {
-        let imageUrl = slide.imageUrl || null;
+    // 画像URLを取得して返す
+    return await Promise.all(
+      slides.map(async (slide) => {
+        let imageUrl = slide.imageUrl;
         
-        // ストレージIDがある場合は署名付きURLを取得
+        // imageIdがある場合は、storageから画像URLを取得
         if (slide.imageId) {
-          imageUrl = await ctx.storage.getUrl(slide.imageId);
+          const url = await ctx.storage.getUrl(slide.imageId);
+          if (url) {
+            imageUrl = url;
+          }
         }
         
         return {
@@ -62,7 +83,6 @@ export const create = mutation({
     title: v.string(),
     description: v.string(),
     imageUrl: v.optional(v.string()),
-    imageId: v.optional(v.id("_storage")),
     linkUrl: v.optional(v.string()),
     backgroundColor: v.string(),
     order: v.number(),
@@ -74,15 +94,29 @@ export const create = mutation({
       throw new Error("認証が必要です");
     }
 
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
+    // imageUrlからstorageIdを抽出してimageIdとして保存
+    let imageId = undefined;
+    if (args.imageUrl && args.imageUrl.includes('/api/storage/')) {
+      const urlParts = args.imageUrl.split('/');
+      const storageIdPart = urlParts[urlParts.length - 1];
+      if (storageIdPart) {
+        imageId = storageIdPart as any;
+      }
+    }
+
     return await ctx.db.insert("slideshowSlides", {
-      title: args.title,
-      description: args.description,
-      imageUrl: args.imageUrl,
-      imageId: args.imageId,
-      linkUrl: args.linkUrl,
-      backgroundColor: args.backgroundColor,
-      order: args.order,
-      isActive: args.isActive,
+      ...args,
+      imageId,
       createdBy: userId,
     });
   },
@@ -90,11 +124,10 @@ export const create = mutation({
 
 export const update = mutation({
   args: {
-    id: v.id("slideshowSlides"),
+    slideId: v.id("slideshowSlides"),
     title: v.string(),
     description: v.string(),
     imageUrl: v.optional(v.string()),
-    imageId: v.optional(v.id("_storage")),
     linkUrl: v.optional(v.string()),
     backgroundColor: v.string(),
     order: v.number(),
@@ -106,28 +139,38 @@ export const update = mutation({
       throw new Error("認証が必要です");
     }
 
-    const updateData: any = {
-      title: args.title,
-      description: args.description,
-      imageUrl: args.imageUrl,
-      linkUrl: args.linkUrl,
-      backgroundColor: args.backgroundColor,
-      order: args.order,
-      isActive: args.isActive,
-      updatedBy: userId,
-    };
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
 
-    if (args.imageId) {
-      updateData.imageId = args.imageId;
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
     }
 
-    return await ctx.db.patch(args.id, updateData);
+    // imageUrlからstorageIdを抽出してimageIdとして保存
+    let imageId = undefined;
+    if (args.imageUrl && args.imageUrl.includes('/api/storage/')) {
+      const urlParts = args.imageUrl.split('/');
+      const storageIdPart = urlParts[urlParts.length - 1];
+      if (storageIdPart) {
+        imageId = storageIdPart as any;
+      }
+    }
+
+    const { slideId, ...updateData } = args;
+    return await ctx.db.patch(slideId, {
+      ...updateData,
+      imageId,
+      updatedBy: userId,
+    });
   },
 });
 
 export const remove = mutation({
   args: {
-    id: v.id("slideshowSlides"),
+    slideId: v.id("slideshowSlides"),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -135,7 +178,17 @@ export const remove = mutation({
       throw new Error("認証が必要です");
     }
 
-    return await ctx.db.delete(args.id);
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
+    return await ctx.db.delete(args.slideId);
   },
 });
 
@@ -147,6 +200,23 @@ export const generateUploadUrl = mutation({
       throw new Error("認証が必要です");
     }
 
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const getImageUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
   },
 });

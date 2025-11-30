@@ -3,7 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 export function Slideshow() {
-  const slides = useQuery(api.slideshow.listActive) || [];
+  const slides = useQuery(api.slideshow.list) || [];
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
