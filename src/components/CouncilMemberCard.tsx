@@ -26,7 +26,7 @@ export function CouncilMemberCard({ member, onClick }: CouncilMemberCardProps) {
           <img
             src={member.memberPhotoUrl || member.photoUrl}
             alt={member.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
           />
         ) : (
           <div className="text-4xl sm:text-6xl text-gray-400">👤</div>
