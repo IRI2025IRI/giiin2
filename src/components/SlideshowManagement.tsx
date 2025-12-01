@@ -24,6 +24,7 @@ export function SlideshowManagement() {
   const [editingSlide, setEditingSlide] = useState<Id<"slideshowSlides"> | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<SlideFormData>({
@@ -40,19 +41,56 @@ export function SlideshowManagement() {
     e.preventDefault();
     if (isSubmitting) return;
 
+    // バリデーション
+    if (!formData.title.trim()) {
+      setSaveMessage("タイトルを入力してください。");
+      return;
+    }
+    if (!formData.description.trim()) {
+      setSaveMessage("説明を入力してください。");
+      return;
+    }
+
     setIsSubmitting(true);
+    setSaveMessage("");
+    
     try {
+      // データを整形（空文字列をundefinedに変換）
+      const submitData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        imageUrl: formData.imageUrl.trim() || undefined,
+        linkUrl: formData.linkUrl.trim() || undefined,
+        backgroundColor: formData.backgroundColor,
+        order: formData.order,
+        isActive: formData.isActive,
+      };
+
+      console.log("送信データ:", submitData);
+
       if (editingSlide) {
+        console.log("更新中:", editingSlide);
         await updateSlide({
           slideId: editingSlide,
-          ...formData,
+          ...submitData,
         });
+        setSaveMessage("スライドを更新しました！");
       } else {
-        await createSlide(formData);
+        console.log("新規作成中");
+        await createSlide(submitData);
+        setSaveMessage("スライドを作成しました！");
       }
-      resetForm();
+      
+      // 成功時は少し待ってからフォームをリセット
+      setTimeout(() => {
+        resetForm();
+        setSaveMessage("");
+      }, 2000);
+      
     } catch (error) {
       console.error("スライドの保存に失敗しました:", error);
+      const errorMessage = error instanceof Error ? error.message : "保存に失敗しました。もう一度お試しください。";
+      setSaveMessage(`エラー: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -94,9 +132,7 @@ export function SlideshowManagement() {
       const { storageId } = json;
       
       // Convex storageのURLを使用
-      const imageUrl = await fetch(`/api/storage/${storageId}`)
-        .then(response => response.url)
-        .catch(() => `https://your-deployment.convex.cloud/api/storage/get?id=${storageId}`);
+      const imageUrl = `/api/storage/${storageId}`;
       
       setFormData(prev => ({ ...prev, imageUrl }));
       
@@ -119,11 +155,12 @@ export function SlideshowManagement() {
       imageUrl: "",
       linkUrl: "",
       backgroundColor: "#1a0b3d",
-      order: 1,
+      order: Math.max(1, (slides?.length || 0) + 1), // 自動で次の順序を設定
       isActive: true,
     });
     setEditingSlide(null);
     setIsFormOpen(false);
+    setSaveMessage("");
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -141,6 +178,7 @@ export function SlideshowManagement() {
     });
     setEditingSlide(slide._id);
     setIsFormOpen(true);
+    setSaveMessage("");
   };
 
   const handleDelete = async (slideId: Id<"slideshowSlides">) => {
@@ -160,7 +198,10 @@ export function SlideshowManagement() {
           🎭 スライドショー管理
         </h2>
         <button
-          onClick={() => setIsFormOpen(true)}
+          onClick={() => {
+            resetForm();
+            setIsFormOpen(true);
+          }}
           className="px-4 py-2 bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300"
         >
           新規スライド作成
@@ -236,6 +277,17 @@ export function SlideshowManagement() {
             <h3 className="text-xl font-bold text-yellow-400 mb-6 amano-text-glow">
               {editingSlide ? "スライド編集" : "新規スライド作成"}
             </h3>
+
+            {/* 保存メッセージ */}
+            {saveMessage && (
+              <div className={`mb-4 p-3 rounded-lg ${
+                saveMessage.includes("失敗") || saveMessage.includes("入力")
+                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                  : "bg-green-500/20 text-green-400 border border-green-500/30"
+              }`}>
+                {saveMessage}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

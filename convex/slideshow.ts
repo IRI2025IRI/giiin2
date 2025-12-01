@@ -107,10 +107,22 @@ export const create = mutation({
     // imageUrlからstorageIdを抽出してimageIdとして保存
     let imageId = undefined;
     if (args.imageUrl && args.imageUrl.includes('/api/storage/')) {
-      const urlParts = args.imageUrl.split('/');
-      const storageIdPart = urlParts[urlParts.length - 1];
-      if (storageIdPart) {
-        imageId = storageIdPart as any;
+      try {
+        const urlParts = args.imageUrl.split('/');
+        const storageIdPart = urlParts[urlParts.length - 1];
+        if (storageIdPart && storageIdPart.length > 0) {
+          // storageIdが有効なID形式かチェック
+          try {
+            const storageDoc = await ctx.db.system.get(storageIdPart as any);
+            if (storageDoc) {
+              imageId = storageIdPart as any;
+            }
+          } catch (storageError) {
+            console.error("Storage ID検証エラー:", storageError);
+          }
+        }
+      } catch (error) {
+        console.error("画像URL解析エラー:", error);
       }
     }
 
@@ -152,10 +164,22 @@ export const update = mutation({
     // imageUrlからstorageIdを抽出してimageIdとして保存
     let imageId = undefined;
     if (args.imageUrl && args.imageUrl.includes('/api/storage/')) {
-      const urlParts = args.imageUrl.split('/');
-      const storageIdPart = urlParts[urlParts.length - 1];
-      if (storageIdPart) {
-        imageId = storageIdPart as any;
+      try {
+        const urlParts = args.imageUrl.split('/');
+        const storageIdPart = urlParts[urlParts.length - 1];
+        if (storageIdPart && storageIdPart.length > 0) {
+          // storageIdが有効なID形式かチェック
+          try {
+            const storageDoc = await ctx.db.system.get(storageIdPart as any);
+            if (storageDoc) {
+              imageId = storageIdPart as any;
+            }
+          } catch (storageError) {
+            console.error("Storage ID検証エラー:", storageError);
+          }
+        }
+      } catch (error) {
+        console.error("画像URL解析エラー:", error);
       }
     }
 
