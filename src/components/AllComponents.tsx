@@ -46,13 +46,13 @@ export function Dashboard({
         />
         <StatsCard
           title="議員数"
-          value={stats?.memberCount || 0}
+          value={stats?.answeredQuestions || 0}
           icon="👥"
           color="from-blue-500 to-cyan-500"
         />
         <StatsCard
           title="今月の質問"
-          value={stats?.questionCount || 0}
+          value={stats?.totalQuestions || 0}
           icon="📅"
           color="from-purple-500 to-pink-500"
         />
@@ -419,7 +419,6 @@ export function QuestionsList({
 
   const questions = useQuery(api.questions.list, {
     category: selectedCategory === "all" ? undefined : selectedCategory,
-    status: selectedStatus === "all" ? undefined : selectedStatus as any,
     searchTerm: searchTerm || undefined,
   });
 
@@ -540,10 +539,10 @@ export function QuestionCard({
   const loggedInUser = useQuery(api.auth.loggedInUser);
   const userLike = useQuery(
     api.likes.getUserLike,
-    loggedInUser ? { questionId: question._id } : "skip"
+    loggedInUser ? { questionId: question._id, userId: loggedInUser._id } : "skip"
   );
-  const likeCount = useQuery(api.likes.getQuestionLikeCount, { questionId: question._id });
-  const toggleLike = useMutation(api.likes.toggleQuestionLike);
+  const likeCount = useQuery(api.likes.getCount, { questionId: question._id });
+  const toggleLike = useMutation(api.likes.toggle);
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -640,11 +639,20 @@ export function CouncilMemberList({
   const [searchTerm, setSearchTerm] = useState("");
 
   const members = useQuery(api.councilMembers.list, {
-    party: selectedParty === "all" ? undefined : selectedParty,
-    searchTerm: searchTerm || undefined,
+    activeOnly: true,
   });
 
-  const parties = useQuery(api.councilMembers.getParties);
+  // 政党一覧を動的に取得
+  const parties = members ? Array.from(new Set(members.map(m => m.party).filter(Boolean))) : [];
+
+  // フィルタリングされた議員一覧
+  const filteredMembers = members ? members.filter(member => {
+    const matchesParty = selectedParty === "all" || member.party === selectedParty;
+    const matchesSearch = !searchTerm || 
+      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (member.party && member.party.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesParty && matchesSearch;
+  }) : [];
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -665,7 +673,7 @@ export function CouncilMemberList({
               className="auth-input-field"
             >
               <option value="all">すべて</option>
-              {parties?.map((party) => (
+              {parties.map((party) => (
                 <option key={party} value={party}>
                   {party}
                 </option>
@@ -694,14 +702,14 @@ export function CouncilMemberList({
           <div className="col-span-full flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
           </div>
-        ) : members.length === 0 ? (
+        ) : filteredMembers.length === 0 ? (
           <div className="col-span-full amano-bg-card rounded-xl p-8 amano-crystal-border text-center">
             <p className="text-gray-400 text-lg">
               条件に一致する議員が見つかりませんでした
             </p>
           </div>
         ) : (
-          members.map((member, index) => (
+          filteredMembers.map((member, index) => (
             <CouncilMemberCard
               key={member._id}
               member={member}
@@ -771,9 +779,9 @@ export function CouncilMemberDetail({
   onBack: () => void;
   onQuestionClick: (questionId: Id<"questions">) => void;
 }) {
-  const member = useQuery(api.councilMembers.getById, { memberId });
-  const questions = useQuery(api.questions.getByMember, { memberId });
-  const externalArticles = useQuery(api.externalArticles.getByMember, { memberId, limit: 5 });
+  const member = useQuery(api.councilMembers.getById, { id: memberId });
+  const questions = useQuery(api.questions.list, { memberId });
+  const externalArticles = useQuery(api.externalArticles.list, { councilMemberId: memberId, limit: 5 });
 
   if (!member) {
     return (
@@ -972,9 +980,28 @@ export function Rankings({
 }: {
   onMemberClick: (memberId: Id<"councilMembers">) => void;
 }) {
-  const stats = useQuery(api.questions.getDetailedStats);
-  const topMembers = useQuery(api.councilMembers.getTopMembers, { limit: 10 });
-  const categoryStats = useQuery(api.questions.getCategoryStats);
+  const stats = useQuery(api.councilMembers.checkDataStatus);
+  const topMembers = useQuery(api.councilMembers.list, { activeOnly: true });
+  const questions = useQuery(api.questions.list, {});
+
+  // カテゴリ統計を動的に計算
+  const categoryStats = questions ? 
+    Object.entries(
+      questions.reduce((acc, q) => {
+        acc[q.category] = (acc[q.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count) : [];
+
+  // 質問数でソートしたトップメンバー
+  const topMembersWithQuestionCount = topMembers && questions ? 
+    topMembers.map(member => ({
+      ...member,
+      questionCount: questions.filter(q => q.councilMemberId === member._id).length
+    }))
+    .sort((a, b) => b.questionCount - a.questionCount)
+    .slice(0, 10) : [];
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -989,26 +1016,26 @@ export function Rankings({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="総質問数"
-            value={stats.totalQuestions}
+            value={stats.questionCount}
             icon="❓"
             color="from-yellow-500 to-orange-500"
           />
           <StatsCard
-            title="回答済み"
-            value={stats.answeredQuestions}
-            icon="✅"
+            title="議員数"
+            value={stats.memberCount}
+            icon="👥"
             color="from-green-500 to-emerald-500"
           />
           <StatsCard
-            title="回答率"
-            value={Math.round((stats.answeredQuestions / stats.totalQuestions) * 100)}
-            icon="📈"
+            title="ユーザー数"
+            value={stats.userCount}
+            icon="👤"
             color="from-blue-500 to-cyan-500"
           />
           <StatsCard
-            title="今月の質問"
-            value={stats.thisMonthQuestions}
-            icon="📅"
+            title="データ状況"
+            value={100}
+            icon="📈"
             color="from-purple-500 to-pink-500"
           />
         </div>
@@ -1021,7 +1048,7 @@ export function Rankings({
             🏆 質問数ランキング
           </h2>
           <div className="space-y-4">
-            {topMembers.map((member, index) => (
+            {topMembersWithQuestionCount.map((member, index) => (
               <div
                 key={member._id}
                 className="flex items-center space-x-4 p-4 rounded-lg amano-bg-glass cursor-pointer hover:shadow-lg transition-all duration-300 animate-slideUp"
@@ -1066,7 +1093,7 @@ export function Rankings({
       )}
 
       {/* カテゴリー別統計 */}
-      {categoryStats && (
+      {categoryStats.length > 0 && (
         <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
           <h2 className="text-2xl font-bold text-yellow-400 mb-6 amano-text-glow">
             📋 カテゴリー別統計
@@ -1109,9 +1136,12 @@ export function News({
   onNewsClick: (newsId: Id<"news">) => void;
 }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const news = useQuery(api.news.list, {
-    category: selectedCategory === "all" ? undefined : selectedCategory,
-  });
+  const news = useQuery(api.news.list, {});
+
+  // フィルタリングされたニュース
+  const filteredNews = news ? news.filter(item => 
+    selectedCategory === "all" || item.category === selectedCategory
+  ) : [];
 
   const categories = [
     "all",
@@ -1154,14 +1184,14 @@ export function News({
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
           </div>
-        ) : news.length === 0 ? (
+        ) : filteredNews.length === 0 ? (
           <div className="amano-bg-card rounded-xl p-8 amano-crystal-border text-center">
             <p className="text-gray-400 text-lg">
               お知らせがありません
             </p>
           </div>
         ) : (
-          news.map((item, index) => (
+          filteredNews.map((item, index) => (
             <div
               key={item._id}
               className="amano-bg-card rounded-xl p-6 amano-crystal-border cursor-pointer hover:shadow-2xl transition-all duration-300 animate-slideUp"
@@ -1207,7 +1237,7 @@ export function NewsDetail({
   newsId: Id<"news">;
   onBack: () => void;
 }) {
-  const news = useQuery(api.news.getById, { newsId });
+  const news = useQuery(api.news.getById, { id: newsId });
 
   if (!news) {
     return (
@@ -1241,7 +1271,6 @@ export function NewsDetail({
               {news.category}
             </span>
             <span>📅 {new Date(news.publishDate).toLocaleDateString("ja-JP")}</span>
-            <span>👤 {news.authorName}</span>
           </div>
         </div>
 
@@ -1276,7 +1305,7 @@ export function Contact() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submitContact = useMutation(api.contact.submit);
+  const submitContact = useMutation(api.contact.submitContactForm);
 
   const categories = [
     "一般的な質問",
@@ -1415,12 +1444,20 @@ export function FAQ() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
-  const faqItems = useQuery(api.faq.list, {
-    category: selectedCategory === "all" ? undefined : selectedCategory,
-    searchTerm: searchTerm || undefined,
-  });
+  const faqItems = useQuery(api.faq.getPublishedFAQs);
 
   const categories = useQuery(api.faq.getCategories);
+
+  // フィルタリングされたFAQアイテム
+  const filteredFaqItems = faqItems ? faqItems.flatMap(categoryGroup => 
+    categoryGroup.items.filter(item => {
+      const matchesCategory = selectedCategory === "all" || categoryGroup.category === selectedCategory;
+      const matchesSearch = !searchTerm || 
+        item.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.answer.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesCategory && matchesSearch;
+    })
+  ) : [];
 
   const toggleExpanded = (itemId: string) => {
     const newExpanded = new Set(expandedItems);
@@ -1480,14 +1517,14 @@ export function FAQ() {
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
           </div>
-        ) : faqItems.length === 0 ? (
+        ) : filteredFaqItems.length === 0 ? (
           <div className="amano-bg-card rounded-xl p-8 amano-crystal-border text-center">
             <p className="text-gray-400 text-lg">
               条件に一致するFAQが見つかりませんでした
             </p>
           </div>
         ) : (
-          faqItems.map((item, index) => (
+          filteredFaqItems.map((item, index) => (
             <div
               key={item._id}
               className="amano-bg-card rounded-xl p-6 amano-crystal-border animate-slideUp"
@@ -1537,10 +1574,14 @@ export function ExternalArticles({
   const [selectedSourceType, setSelectedSourceType] = useState("all");
 
   const articles = useQuery(api.externalArticles.list, {
-    memberId: selectedMember === "all" ? undefined : selectedMember as Id<"councilMembers">,
+    councilMemberId: selectedMember === "all" ? undefined : selectedMember as Id<"councilMembers">,
     category: selectedCategory === "all" ? undefined : selectedCategory,
-    sourceType: selectedSourceType === "all" ? undefined : selectedSourceType,
   });
+
+  // フィルタリングされた記事
+  const filteredArticles = articles ? articles.filter(article => 
+    selectedSourceType === "all" || article.sourceType === selectedSourceType
+  ) : [];
 
   const members = useQuery(api.councilMembers.list, {});
 
@@ -1643,14 +1684,14 @@ export function ExternalArticles({
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
           </div>
-        ) : articles.length === 0 ? (
+        ) : filteredArticles.length === 0 ? (
           <div className="amano-bg-card rounded-xl p-8 amano-crystal-border text-center">
             <p className="text-gray-400 text-lg">
               条件に一致する記事が見つかりませんでした
             </p>
           </div>
         ) : (
-          articles.map((article, index) => (
+          filteredArticles.map((article, index) => (
             <div
               key={article._id}
               className="amano-bg-card rounded-xl p-6 amano-crystal-border cursor-pointer hover:shadow-2xl transition-all duration-300 animate-slideUp"
@@ -1670,7 +1711,7 @@ export function ExternalArticles({
                     {article.title}
                   </h3>
                   <div className="flex items-center space-x-4 text-sm text-gray-300 mb-3">
-                    <span className="text-cyan-400 font-medium">{article.memberName}</span>
+                    <span className="text-cyan-400 font-medium">{article.councilMember?.name || "不明"}</span>
                     <span>📅 {new Date(article.publishedAt).toLocaleDateString("ja-JP")}</span>
                     <span className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-2 py-1 rounded-full text-xs">
                       {getSourceTypeLabel(article.sourceType)}
@@ -1702,7 +1743,7 @@ export function ExternalArticleDetail({
   articleId: Id<"externalArticles">;
   onBack: () => void;
 }) {
-  const article = useQuery(api.externalArticles.getById, { articleId });
+  const article = useQuery(api.externalArticles.getById, { id: articleId });
 
   useEffect(() => {
     if (article) {
@@ -1750,7 +1791,7 @@ export function ExternalArticleDetail({
             {article.title}
           </h1>
           <div className="flex items-center space-x-4 text-sm text-gray-300 mb-4">
-            <span className="text-cyan-400 font-medium">{article.memberName}</span>
+            <span className="text-cyan-400 font-medium">{article.councilMember?.name || "不明"}</span>
             <span>📅 {new Date(article.publishedAt).toLocaleDateString("ja-JP")}</span>
             <span className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-3 py-1 rounded-full">
               {getSourceTypeLabel(article.sourceType)}

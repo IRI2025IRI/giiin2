@@ -15,17 +15,63 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
   const [selectedSessionNumber, setSelectedSessionNumber] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // 検索実行用の状態
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeMember, setActiveMember] = useState<Id<"councilMembers"> | null>(null);
+  const [activeSessionNumber, setActiveSessionNumber] = useState("all");
+  const [activeSortBy, setActiveSortBy] = useState("newest");
 
-  const questions = useQuery(api.questions.list, {
-    category: selectedCategory === "all" ? undefined : selectedCategory,
-    councilMemberId: selectedMember || undefined,
-    searchTerm: searchQuery || undefined,
-  });
+  // ページネーション対応のクエリ（questionsPagedSearchを使用）
+  const searchResults = useQuery(
+    api.questionsPagedSearch.searchWithPagination,
+    {
+      page: currentPage,
+      pageSize: 20,
+      category: activeCategory === "all" ? undefined : activeCategory,
+      memberId: activeMember || undefined,
+      searchTerm: activeSearchQuery || undefined,
+      sessionNumber: activeSessionNumber === "all" ? undefined : activeSessionNumber,
+      sortBy: activeSortBy,
+    }
+  );
 
   const councilMembers = useQuery(api.councilMembers.list, { activeOnly: true });
   const sessionNumbers = useQuery(api.questions.getSessionNumbers);
 
-  if (!questions || !councilMembers || !sessionNumbers) {
+  // 検索実行
+  const handleSearch = () => {
+    setActiveSearchQuery(searchQuery);
+    setActiveCategory(selectedCategory);
+    setActiveMember(selectedMember);
+    setActiveSessionNumber(selectedSessionNumber);
+    setActiveSortBy(sortBy);
+    setCurrentPage(1); // 検索時はページを1に戻す
+  };
+
+  // フィルターリセット
+  const handleReset = () => {
+    setSearchQuery("");
+    setSelectedCategory("all");
+    setSelectedMember(null);
+    setSelectedSessionNumber("all");
+    setSortBy("newest");
+    setActiveSearchQuery("");
+    setActiveCategory("all");
+    setActiveMember(null);
+    setActiveSessionNumber("all");
+    setActiveSortBy("newest");
+    setCurrentPage(1);
+  };
+
+  // ページ変更
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  if (!searchResults) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -36,33 +82,8 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     );
   }
 
-  // カテゴリー一覧を取得
-  const categories = Array.from(new Set(questions.map(q => q.category))).sort();
-
-  // 質問をフィルタリングとソート
-  const filteredQuestions = questions
-    .filter(question => {
-      const matchesSearch = searchQuery === "" || 
-        question.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        question.content.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesSessionNumber = selectedSessionNumber === "all" || 
-        question.sessionNumber === selectedSessionNumber;
-      
-      return matchesSearch && matchesSessionNumber;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return b.sessionDate - a.sessionDate;
-        case "oldest":
-          return a.sessionDate - b.sessionDate;
-        case "title":
-          return a.title.localeCompare(b.title, 'ja');
-        default:
-          return 0;
-      }
-    });
+  // カテゴリー一覧を取得（現在の結果から）
+  const categories = Array.from(new Set(searchResults.questions.map(q => q.category))).sort();
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -107,111 +128,182 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
 
         {/* フィルター内容 */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-slideDown">
-            {/* カテゴリー */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                カテゴリー
-              </label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="auth-input-field text-sm"
-              >
-                <option value="all">すべて</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-4 animate-slideDown">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* カテゴリー */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  カテゴリー
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="auth-input-field text-sm"
+                >
+                  <option value="all">すべて</option>
+                  <option value="政策・提案">政策・提案</option>
+                  <option value="予算・財政">予算・財政</option>
+                  <option value="教育・文化">教育・文化</option>
+                  <option value="福祉・医療">福祉・医療</option>
+                  <option value="環境・インフラ">環境・インフラ</option>
+                  <option value="産業・経済">産業・経済</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+
+              {/* 議員 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  議員
+                </label>
+                <select
+                  value={selectedMember || ""}
+                  onChange={(e) => setSelectedMember(e.target.value ? e.target.value as Id<"councilMembers"> : null)}
+                  className="auth-input-field text-sm"
+                >
+                  <option value="">すべて</option>
+                  {councilMembers?.map((member) => (
+                    <option key={member._id} value={member._id}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 会議番号 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  会議番号
+                </label>
+                <select
+                  value={selectedSessionNumber}
+                  onChange={(e) => setSelectedSessionNumber(e.target.value)}
+                  className="auth-input-field text-sm"
+                >
+                  <option value="all">すべて</option>
+                  {sessionNumbers?.map((sessionNumber) => (
+                    <option key={sessionNumber} value={sessionNumber}>
+                      {sessionNumber}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* ソート */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  並び順
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="auth-input-field text-sm"
+                >
+                  <option value="newest">新しい順</option>
+                  <option value="oldest">古い順</option>
+                  <option value="title">タイトル順</option>
+                </select>
+              </div>
             </div>
 
-            {/* 議員 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                議員
-              </label>
-              <select
-                value={selectedMember || ""}
-                onChange={(e) => setSelectedMember(e.target.value ? e.target.value as Id<"councilMembers"> : null)}
-                className="auth-input-field text-sm"
+            {/* 検索実行・リセットボタン */}
+            <div className="flex space-x-4">
+              <button
+                onClick={handleSearch}
+                className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 amano-glow"
               >
-                <option value="">すべて</option>
-                {councilMembers.map((member) => (
-                  <option key={member._id} value={member._id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 会議番号 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                会議番号
-              </label>
-              <select
-                value={selectedSessionNumber}
-                onChange={(e) => setSelectedSessionNumber(e.target.value)}
-                className="auth-input-field text-sm"
+                🔍 検索実行
+              </button>
+              <button
+                onClick={handleReset}
+                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
               >
-                <option value="all">すべて</option>
-                {sessionNumbers.map((sessionNumber) => (
-                  <option key={sessionNumber} value={sessionNumber}>
-                    {sessionNumber}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* ソート */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                並び順
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="auth-input-field text-sm"
-              >
-                <option value="newest">新しい順</option>
-                <option value="oldest">古い順</option>
-                <option value="title">タイトル順</option>
-              </select>
+                リセット
+              </button>
             </div>
           </div>
         )}
-
-        {/* 結果数 */}
-        <div className={`${showFilters ? 'mt-4 pt-4 border-t border-purple-500/30' : ''} text-sm text-gray-400`}>
-          {filteredQuestions.length}件の質問が見つかりました
-        </div>
       </div>
 
-      {/* 質問一覧 */}
-      <div className="space-y-4">
-        {filteredQuestions.length === 0 ? (
-          <div className="text-center py-12 amano-bg-card rounded-xl amano-crystal-border">
+      {/* 結果表示 */}
+      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-yellow-400 amano-text-glow">
+            📋 質問一覧
+          </h2>
+          <div className="text-sm text-gray-400">
+            {searchResults.pagination.totalCount}件中 {((searchResults.pagination.currentPage - 1) * searchResults.pagination.pageSize) + 1}〜{Math.min(searchResults.pagination.currentPage * searchResults.pagination.pageSize, searchResults.pagination.totalCount)}件を表示
+          </div>
+        </div>
+
+        {searchResults.questions.length === 0 ? (
+          <div className="text-center py-8">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-medium text-gray-300 mb-2">質問が見つかりません</h3>
-            <p className="text-gray-400">
-              検索条件を変更してお試しください。
-            </p>
+            <p className="text-gray-400 text-lg">該当する質問が見つかりませんでした</p>
+            <p className="text-gray-500 text-sm mt-2">検索条件を変更してお試しください</p>
           </div>
         ) : (
-          filteredQuestions.map((question, index) => (
-            <div
-              key={question._id}
-              className="animate-slideUp"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
+          <div className="space-y-4">
+            {searchResults.questions.map((question) => (
               <QuestionCard
+                key={question._id}
                 question={question}
                 onClick={() => onQuestionClick(question._id)}
               />
-            </div>
-          ))
+            ))}
+            
+            {/* ページネーション */}
+            {searchResults.pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center space-x-2 pt-6">
+                {/* 前のページボタン */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!searchResults.pagination.hasPrevPage}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                    searchResults.pagination.hasPrevPage
+                      ? "bg-purple-600 hover:bg-purple-700 text-white"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  ← 前
+                </button>
+
+                {/* ページ番号 */}
+                {Array.from({ length: Math.min(5, searchResults.pagination.totalPages) }, (_, i) => {
+                  const startPage = Math.max(1, currentPage - 2);
+                  const pageNum = startPage + i;
+                  if (pageNum > searchResults.pagination.totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                        pageNum === currentPage
+                          ? "bg-yellow-500 text-black font-bold"
+                          : "bg-purple-600 hover:bg-purple-700 text-white"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+
+                {/* 次のページボタン */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!searchResults.pagination.hasNextPage}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                    searchResults.pagination.hasNextPage
+                      ? "bg-purple-600 hover:bg-purple-700 text-white"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  次 →
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
