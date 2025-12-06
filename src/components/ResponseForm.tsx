@@ -30,8 +30,13 @@ export function ResponseForm({ questionId, response, onClose, onSuccess, onCance
   const [modalPosition, setModalPosition] = useState({ top: 0 });
   
   useEffect(() => {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    setModalPosition({ top: scrollTop + 50 }); // 50pxのマージンを追加
+    // モーダル表示時にスクロールを無効化
+    document.body.style.overflow = 'hidden';
+    
+    // クリーンアップ関数でスクロールを復元
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,9 +90,8 @@ export function ResponseForm({ questionId, response, onClose, onSuccess, onCance
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-[9999]" style={{ position: 'absolute', top: 0, left: 0, right: 0, minHeight: '100vh' }}>
-      <div className="flex items-start justify-center p-4" style={{ paddingTop: `${modalPosition.top}px` }}>
-        <div className="amano-bg-card rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto amano-crystal-border" style={{ position: 'relative' }}>
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-[9999] flex items-center justify-center p-4">
+      <div className="amano-bg-card rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto amano-crystal-border">
         <div className="sticky top-0 amano-bg-glass border-b border-purple-500 px-8 py-6 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-200 flex items-center space-x-2 amano-text-glow">
@@ -218,6 +222,5 @@ export function ResponseForm({ questionId, response, onClose, onSuccess, onCance
         </form>
       </div>
     </div>
-  </div>
   );
 }

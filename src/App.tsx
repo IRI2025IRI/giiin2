@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import { Authenticated, Unauthenticated } from "convex/react";
 import { SignOutButton } from "./SignOutButton";
+import { ScrollToTopButton } from "./components/ScrollToTopButton";
+import { LoginModal } from "./components/LoginModal";
+import { useUrlNavigation } from "./hooks/useUrlNavigation";
+
+// コンポーネントを通常のimportで読み込み（パフォーマンス最適化済み）
 import { Dashboard } from "./components/Dashboard";
 import { QuestionsList } from "./components/QuestionsList";
 import { CouncilMemberList } from "./components/CouncilMemberList";
@@ -17,9 +22,31 @@ import { AdminPanel } from "./components/AdminPanel";
 import { TermsAndPrivacy } from "./components/TermsAndPrivacy";
 import { ExternalArticles } from "./components/ExternalArticles";
 import { ExternalArticleDetail } from "./components/ExternalArticleDetail";
-import { ScrollToTopButton } from "./components/ScrollToTopButton";
-import { LoginModal } from "./components/LoginModal";
-import { useUrlNavigation } from "./hooks/useUrlNavigation";
+
+// パフォーマンス最適化フック
+function usePerformanceMode() {
+  return useMemo(() => {
+    if (typeof window === 'undefined') return 'medium';
+    
+    const hardwareConcurrency = navigator.hardwareConcurrency || 2;
+    const memory = (navigator as any).deviceMemory || 2;
+    
+    let score = 0;
+    if (hardwareConcurrency >= 8) score += 3;
+    else if (hardwareConcurrency >= 4) score += 2;
+    else score += 1;
+    
+    if (memory >= 8) score += 3;
+    else if (memory >= 4) score += 2;
+    else score += 1;
+    
+    if (score >= 5) return 'high';
+    else if (score >= 3) return 'medium';
+    else return 'low';
+  }, []);
+}
+
+// ローディングコンポーネント（削除）
 
 // ヘルパー関数：回答内容のキーワードを装飾
 function formatResponseContent(content: string) {
@@ -47,12 +74,12 @@ function formatResponseContent(content: string) {
 }
 
 // ページトップにスクロールするヘルパー関数
-function scrollToTop() {
+const scrollToTop = (smooth: boolean = true) => {
   window.scrollTo({
     top: 0,
-    behavior: 'smooth'
+    behavior: smooth ? 'smooth' : 'auto'
   });
-}
+};
 
 function AppContent() {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -63,6 +90,11 @@ function AppContent() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
+  // パフォーマンス最適化
+  const performanceMode = usePerformanceMode();
+  const enableAnimations = performanceMode === 'high';
+  const enableBlur = performanceMode !== 'low';
+
   // メニュー設定を取得
   const visibleMenus = useQuery(api.menuSettings.getVisibleMenus);
   
@@ -72,8 +104,13 @@ function AppContent() {
   // ログインユーザー情報を取得
   const loggedInUser = useQuery(api.auth.loggedInUser);
   
-  // ユーザーの役割を取得
-  const userRole = useQuery(api.admin.getUserRole);
+  // ユーザーの役割を取得（パフォーマンス向上のため条件付き）
+  const userRole = useQuery(api.admin.getUserRole, isAdmin ? {} : "skip");
+
+  // パフォーマンスクラスを動的に設定
+  useEffect(() => {
+    document.body.className = `performance-${performanceMode}`;
+  }, [performanceMode]);
 
   // 認証状態を監視してログインモーダルを自動で閉じる
   useEffect(() => {
@@ -103,28 +140,25 @@ function AppContent() {
     { key: "contact", name: "お問い合わせ", icon: "📧" },
   ];
 
-  // デバッグ用ログ
-  console.log("App.tsx - visibleMenus:", visibleMenus);
-  
-  // 表示するメニューアイテムを決定
-  const menuItems = visibleMenus && visibleMenus.length > 0 
-    ? visibleMenus.map(menu => ({
-        key: menu.menuKey,
-        name: menu.menuName,
-        icon: defaultMenuItems.find(item => item.key === menu.menuKey)?.icon || "📄"
-      }))
-    : defaultMenuItems.filter(item => 
-        // デフォルトでは議員ブログ・SNSは非表示
-        item.key !== "externalArticles"
-      );
-  
-  console.log("App.tsx - menuItems:", menuItems);
+  // 表示するメニューアイテムを決定（メモ化）
+  const menuItems = useMemo(() => {
+    return visibleMenus && visibleMenus.length > 0 
+      ? visibleMenus.map(menu => ({
+          key: menu.menuKey,
+          name: menu.menuName,
+          icon: defaultMenuItems.find(item => item.key === menu.menuKey)?.icon || "📄"
+        }))
+      : defaultMenuItems.filter(item => 
+          // デフォルトでは議員ブログ・SNSは非表示
+          item.key !== "externalArticles"
+        );
+  }, [visibleMenus]);
 
-  const handleMemberClick = (memberId: Id<"councilMembers">) => {
+  const handleMemberClick = useCallback((memberId: Id<"councilMembers">) => {
     setSelectedMemberId(memberId);
     setCurrentView("memberDetail");
     setShowMobileMenu(false);
-    scrollToTop(); // ページトップにスクロール
+    scrollToTop(enableAnimations);
     
     // Update URL
     const url = new URL(window.location.href);
@@ -134,13 +168,13 @@ function AppContent() {
     url.searchParams.delete("article");
     url.searchParams.delete("question");
     window.history.pushState({}, "", url.toString());
-  };
+  }, [enableAnimations]);
 
-  const handleNewsClick = (newsId: Id<"news">) => {
+  const handleNewsClick = useCallback((newsId: Id<"news">) => {
     setSelectedNewsId(newsId);
     setCurrentView("newsDetail");
     setShowMobileMenu(false);
-    scrollToTop(); // ページトップにスクロール
+    scrollToTop(enableAnimations);
     
     // Update URL
     const url = new URL(window.location.href);
@@ -150,13 +184,13 @@ function AppContent() {
     url.searchParams.delete("article");
     url.searchParams.delete("question");
     window.history.pushState({}, "", url.toString());
-  };
+  }, [enableAnimations]);
 
-  const handleArticleClick = (articleId: Id<"externalArticles">) => {
+  const handleArticleClick = useCallback((articleId: Id<"externalArticles">) => {
     setSelectedArticleId(articleId);
     setCurrentView("externalArticleDetail");
     setShowMobileMenu(false);
-    scrollToTop(); // ページトップにスクロール
+    scrollToTop(enableAnimations);
     
     // Update URL
     const url = new URL(window.location.href);
@@ -166,13 +200,13 @@ function AppContent() {
     url.searchParams.delete("news");
     url.searchParams.delete("question");
     window.history.pushState({}, "", url.toString());
-  };
+  }, [enableAnimations]);
 
-  const handleQuestionClick = (questionId: Id<"questions">) => {
+  const handleQuestionClick = useCallback((questionId: Id<"questions">) => {
     setSelectedQuestionId(questionId);
     setCurrentView("questionDetail");
     setShowMobileMenu(false);
-    scrollToTop(); // ページトップにスクロール
+    scrollToTop(enableAnimations);
     
     // Update URL
     const url = new URL(window.location.href);
@@ -182,9 +216,9 @@ function AppContent() {
     url.searchParams.delete("news");
     url.searchParams.delete("article");
     window.history.pushState({}, "", url.toString());
-  };
+  }, [enableAnimations]);
 
-  const handleViewChange = (view: string) => {
+  const handleViewChange = useCallback((view: string) => {
     // 管理画面にアクセスしようとした場合の処理を改善
     if (view === "admin") {
       // 認証状態をチェック
@@ -208,7 +242,7 @@ function AppContent() {
     setSelectedArticleId(null);
     setSelectedQuestionId(null);
     setShowMobileMenu(false);
-    scrollToTop(); // ページトップにスクロール
+    scrollToTop(enableAnimations);
     
     // Update URL
     const url = new URL(window.location.href);
@@ -222,91 +256,100 @@ function AppContent() {
     url.searchParams.delete("article");
     url.searchParams.delete("question");
     window.history.pushState({}, "", url.toString());
-  };
+  }, [isAdmin, enableAnimations]);
 
   const renderContent = () => {
     switch (currentView) {
-      case "dashboard":
-        return (
-          <Dashboard 
-            onMemberClick={handleMemberClick}
-            onNewsClick={handleNewsClick}
-            onViewChange={handleViewChange}
-            onQuestionClick={handleQuestionClick}
-          />
-        );
-      case "questions":
-        return <QuestionsList onQuestionClick={handleQuestionClick} />;
-      case "questionDetail":
-        return selectedQuestionId ? (
-          <QuestionDetail 
-            questionId={selectedQuestionId} 
-            onBack={() => handleViewChange("questions")}
-            onMemberClick={handleMemberClick}
-          />
-        ) : (
-          <QuestionsList onQuestionClick={handleQuestionClick} />
-        );
-      case "members":
-        return <CouncilMemberList onMemberClick={handleMemberClick} />;
-      case "memberDetail":
-        return selectedMemberId ? (
-          <CouncilMemberDetail 
-            memberId={selectedMemberId} 
-            onBack={() => handleViewChange("members")}
-            onQuestionClick={handleQuestionClick}
-          />
-        ) : (
-          <CouncilMemberList onMemberClick={handleMemberClick} />
-        );
-      case "rankings":
-        return <Rankings onMemberClick={handleMemberClick} />;
-      case "news":
-        return <News onNewsClick={handleNewsClick} />;
-      case "newsDetail":
-        return selectedNewsId ? (
-          <NewsDetail 
-            newsId={selectedNewsId} 
-            onBack={() => handleViewChange("news")}
-          />
-        ) : (
-          <News onNewsClick={handleNewsClick} />
-        );
-      case "externalArticles":
-        return <ExternalArticles onArticleClick={handleArticleClick} />;
-      case "externalArticleDetail":
-        return selectedArticleId ? (
-          <ExternalArticleDetail 
-            articleId={selectedArticleId} 
-            onBack={() => handleViewChange("externalArticles")}
-          />
-        ) : (
-          <ExternalArticles onArticleClick={handleArticleClick} />
-        );
-      case "faq":
-        return <FAQ />;
-      case "contact":
-        return <Contact />;
-      case "admin":
-        return <AdminPanel />;
-      case "terms":
-        return <TermsAndPrivacy />;
-      default:
-        return (
-          <Dashboard 
-            onMemberClick={handleMemberClick}
-            onNewsClick={handleNewsClick}
-            onViewChange={handleViewChange}
-            onQuestionClick={handleQuestionClick}
-          />
-        );
-    }
+            case "dashboard":
+              return (
+                <Dashboard 
+                  onMemberClick={handleMemberClick}
+                  onNewsClick={handleNewsClick}
+                  onViewChange={handleViewChange}
+                  onQuestionClick={handleQuestionClick}
+                />
+              );
+            case "questions":
+              return <QuestionsList onQuestionClick={handleQuestionClick} />;
+            case "questionDetail":
+              return selectedQuestionId ? (
+                <QuestionDetail 
+                  questionId={selectedQuestionId} 
+                  onBack={() => handleViewChange("questions")}
+                  onMemberClick={handleMemberClick}
+                />
+              ) : (
+                <QuestionsList onQuestionClick={handleQuestionClick} />
+              );
+            case "members":
+              return <CouncilMemberList onMemberClick={handleMemberClick} />;
+            case "memberDetail":
+              return selectedMemberId ? (
+                <CouncilMemberDetail 
+                  memberId={selectedMemberId} 
+                  onBack={() => handleViewChange("members")}
+                  onQuestionClick={handleQuestionClick}
+                />
+              ) : (
+                <CouncilMemberList onMemberClick={handleMemberClick} />
+              );
+            case "rankings":
+              return <Rankings onMemberClick={handleMemberClick} />;
+            case "news":
+              return <News onNewsClick={handleNewsClick} />;
+            case "newsDetail":
+              return selectedNewsId ? (
+                <NewsDetail 
+                  newsId={selectedNewsId} 
+                  onBack={() => handleViewChange("news")}
+                />
+              ) : (
+                <News onNewsClick={handleNewsClick} />
+              );
+            case "externalArticles":
+              return <ExternalArticles onArticleClick={handleArticleClick} />;
+            case "externalArticleDetail":
+              return selectedArticleId ? (
+                <ExternalArticleDetail 
+                  articleId={selectedArticleId} 
+                  onBack={() => handleViewChange("externalArticles")}
+                />
+              ) : (
+                <ExternalArticles onArticleClick={handleArticleClick} />
+              );
+            case "faq":
+              return <FAQ />;
+            case "contact":
+              return <Contact />;
+            case "admin":
+              return <AdminPanel />;
+            case "terms":
+              return <TermsAndPrivacy />;
+            default:
+              return (
+                <Dashboard 
+                  onMemberClick={handleMemberClick}
+                  onNewsClick={handleNewsClick}
+                  onViewChange={handleViewChange}
+                  onQuestionClick={handleQuestionClick}
+                />
+              );
+        }
   };
+
+  // 軽量化されたサイドバースタイル
+  const sidebarClass = enableBlur 
+    ? "amano-bg-sidebar" 
+    : "bg-gray-900/95";
+
+  const buttonClass = enableAnimations
+    ? "w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3"
+    : "w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3";
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
       {/* サイドバー - PC版では固定、モバイル版では通常通り */}
-      <div className={`lg:w-64 lg:fixed lg:h-screen lg:overflow-y-auto amano-bg-sidebar border-r border-purple-500/30 ${showMobileMenu ? 'block' : 'hidden lg:block'}`}>
+      <div className={`lg:w-64 lg:fixed lg:h-screen lg:overflow-y-auto ${sidebarClass} border-r border-purple-500/30 ${showMobileMenu ? 'block' : 'hidden lg:block'}`}>
         <div className="p-6">
           {/* ロゴ・タイトル */}
           <div className="text-center mb-8">
@@ -320,7 +363,7 @@ function AppContent() {
           <nav className="space-y-2">
             <button
               onClick={() => handleViewChange("dashboard")}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3 ${
+              className={`${buttonClass} ${
                 currentView === "dashboard"
                   ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
                   : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
@@ -334,7 +377,7 @@ function AppContent() {
               <button
                 key={item.key}
                 onClick={() => handleViewChange(item.key)}
-                className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3 ${
+                className={`${buttonClass} ${
                   currentView === item.key
                     ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
                     : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
@@ -350,7 +393,7 @@ function AppContent() {
               {isAdmin && (
                 <button
                   onClick={() => handleViewChange("admin")}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3 ${
+                  className={`${buttonClass} ${
                     currentView === "admin"
                       ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
                       : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
@@ -430,10 +473,12 @@ function AppContent() {
       </div>
 
       {/* ログインモーダル */}
-      <LoginModal 
-        isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)} 
-      />
+      {showLoginModal && (
+        <LoginModal 
+          isOpen={showLoginModal} 
+          onClose={() => setShowLoginModal(false)} 
+        />
+      )}
     </div>
   );
 }

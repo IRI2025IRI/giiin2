@@ -12,6 +12,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedMember, setSelectedMember] = useState<Id<"councilMembers"> | null>(null);
+  const [selectedSessionNumber, setSelectedSessionNumber] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -22,8 +23,9 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
   });
 
   const councilMembers = useQuery(api.councilMembers.list, { activeOnly: true });
+  const sessionNumbers = useQuery(api.questions.getSessionNumbers);
 
-  if (!questions || !councilMembers) {
+  if (!questions || !councilMembers || !sessionNumbers) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -44,7 +46,10 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
         question.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         question.content.toLowerCase().includes(searchQuery.toLowerCase());
       
-      return matchesSearch;
+      const matchesSessionNumber = selectedSessionNumber === "all" || 
+        question.sessionNumber === selectedSessionNumber;
+      
+      return matchesSearch && matchesSessionNumber;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -102,7 +107,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
 
         {/* フィルター内容 */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slideDown">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-slideDown">
             {/* カテゴリー */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -136,6 +141,25 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
                 {councilMembers.map((member) => (
                   <option key={member._id} value={member._id}>
                     {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 会議番号 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                会議番号
+              </label>
+              <select
+                value={selectedSessionNumber}
+                onChange={(e) => setSelectedSessionNumber(e.target.value)}
+                className="auth-input-field text-sm"
+              >
+                <option value="all">すべて</option>
+                {sessionNumbers.map((sessionNumber) => (
+                  <option key={sessionNumber} value={sessionNumber}>
+                    {sessionNumber}
                   </option>
                 ))}
               </select>

@@ -41,8 +41,13 @@ export function QuestionForm({ question, onClose, onSuccess }: QuestionFormProps
   const [modalPosition, setModalPosition] = useState({ top: 0 });
   
   useEffect(() => {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    setModalPosition({ top: scrollTop + 50 }); // 50pxのマージンを追加
+    // モーダル表示時にスクロールを無効化
+    document.body.style.overflow = 'hidden';
+    
+    // クリーンアップ関数でスクロールを復元
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, []);
 
   // questionプロパティが変更されたときにフォームデータを更新
@@ -188,9 +193,8 @@ export function QuestionForm({ question, onClose, onSuccess }: QuestionFormProps
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-[9999]" style={{ position: 'absolute', top: 0, left: 0, right: 0, minHeight: '100vh' }}>
-      <div className="flex items-start justify-center p-4" style={{ paddingTop: `${modalPosition.top}px` }}>
-        <div className="amano-bg-card rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto amano-crystal-border" style={{ position: 'relative' }}>
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-[9999] flex items-center justify-center p-4">
+      <div className="amano-bg-card rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto amano-crystal-border">
         <div className="sticky top-0 amano-bg-glass border-b border-purple-500 px-8 py-6 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-200 flex items-center space-x-2 amano-text-glow">
@@ -312,12 +316,22 @@ export function QuestionForm({ question, onClose, onSuccess }: QuestionFormProps
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   会議番号
                 </label>
-                <div className="relative">
+                <div className="relative z-50">
                   <input
                     type="text"
                     value={formData.sessionNumber}
                     onChange={(e) => handleInputChange("sessionNumber", e.target.value)}
                     onFocus={() => setShowSessionNumberDropdown(true)}
+                    onBlur={(e) => {
+                      // 少し遅延させてドロップダウン内のクリックを許可
+                      setTimeout(() => {
+                        const activeElement = document.activeElement;
+                        const currentTarget = e.currentTarget;
+                        if (!activeElement || !currentTarget || !currentTarget.contains(activeElement)) {
+                          setShowSessionNumberDropdown(false);
+                        }
+                      }, 150);
+                    }}
                     className="auth-input-field pr-10"
                     placeholder="第○回定例会など"
                   />
@@ -331,16 +345,29 @@ export function QuestionForm({ question, onClose, onSuccess }: QuestionFormProps
                   
                   {/* ドロップダウンリスト */}
                   {showSessionNumberDropdown && sessionNumbers && sessionNumbers.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 amano-bg-card border border-purple-500 rounded-lg shadow-lg max-h-48 overflow-y-auto amano-crystal-border">
+                    <div 
+                      className="absolute w-full bottom-full mb-1 amano-bg-card border border-purple-500 rounded-lg shadow-lg max-h-48 overflow-y-auto amano-crystal-border" 
+                      style={{ 
+                        zIndex: 1000000, 
+                        position: 'absolute'
+                      }}
+                      onMouseLeave={() => {
+                        // マウスがドロップダウンから離れたら閉じる
+                        setTimeout(() => setShowSessionNumberDropdown(false), 100);
+                      }}
+                    >
                       <div className="p-2 border-b border-purple-500">
                         <div className="text-xs text-gray-300 font-medium">過去の会議番号から選択</div>
                       </div>
                       {sessionNumbers.map((sessionNumber, index) => (
                         <button
-                          key={index}
+                          key={`session-${index}-${sessionNumber}`}
                           type="button"
-                          onClick={() => handleSessionNumberSelect(sessionNumber || "")}
-                          className="w-full text-left px-4 py-2 hover:bg-purple-500 hover:bg-opacity-20 text-sm text-gray-300 border-b border-purple-500 last:border-b-0 transition-colors"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSessionNumberSelect(sessionNumber || "");
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-purple-500 hover:bg-opacity-20 text-sm text-gray-300 border-b border-purple-500 last:border-b-0 transition-colors cursor-pointer block"
                         >
                           {sessionNumber}
                         </button>
@@ -349,13 +376,7 @@ export function QuestionForm({ question, onClose, onSuccess }: QuestionFormProps
                   )}
                 </div>
                 
-                {/* 入力フィールドの外をクリックしたときにドロップダウンを閉じる */}
-                {showSessionNumberDropdown && (
-                  <div 
-                    className="fixed inset-0 z-5"
-                    onClick={() => setShowSessionNumberDropdown(false)}
-                  />
-                )}
+
               </div>
             </div>
           </div>
@@ -573,6 +594,5 @@ export function QuestionForm({ question, onClose, onSuccess }: QuestionFormProps
         )}
       </div>
     </div>
-  </div>
   );
 }
