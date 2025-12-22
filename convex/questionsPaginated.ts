@@ -9,15 +9,29 @@ export const listPaginated = query({
     category: v.optional(v.string()),
     memberId: v.optional(v.id("councilMembers")),
     searchTerm: v.optional(v.string()),
+    sessionNumber: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let queryBuilder;
     
-    if (args.memberId) {
+    // 最も効率的なインデックスを選択
+    if (args.sessionNumber) {
+      queryBuilder = ctx.db
+        .query("questions")
+        .withIndex("by_session_number", (q) => 
+          q.eq("sessionNumber", args.sessionNumber!)
+        );
+    } else if (args.memberId) {
       queryBuilder = ctx.db
         .query("questions")
         .withIndex("by_council_member", (q) => 
           q.eq("councilMemberId", args.memberId!)
+        );
+    } else if (args.category) {
+      queryBuilder = ctx.db
+        .query("questions")
+        .withIndex("by_category", (q) => 
+          q.eq("category", args.category!)
         );
     } else {
       queryBuilder = ctx.db
@@ -28,12 +42,8 @@ export const listPaginated = query({
     // ページネーション適用
     const result = await queryBuilder.order("desc").paginate(args.paginationOpts);
     
-    // フィルタリング（ページネーション後）
+    // 追加フィルタリング（検索のみ）
     let filteredQuestions = result.page;
-    
-    if (args.category) {
-      filteredQuestions = filteredQuestions.filter(q => q.category === args.category);
-    }
     
     if (args.searchTerm) {
       const searchLower = args.searchTerm.toLowerCase();

@@ -272,11 +272,11 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
             disabled={isLiking}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 amano-crystal-border ${
               question.isLiked
-                ? "bg-gradient-to-r from-pink-500 to-red-500 text-white animate-amano-glow"
-                : "bg-gradient-to-r from-gray-600 to-gray-700 text-gray-300 hover:from-pink-500 hover:to-red-500 hover:text-white"
+                ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white animate-amano-glow"
+                : "bg-gradient-to-r from-gray-600 to-gray-700 text-gray-300 hover:from-orange-500 hover:to-yellow-500 hover:text-white"
             }`}
           >
-            <span>{question.isLiked ? "💖" : "🤍"}</span>
+            <span>{question.isLiked ? "🤔" : "💭"}</span>
             <span>{question.likeCount}</span>
           </button>
           

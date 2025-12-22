@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { QuestionCard } from "./QuestionCard";
@@ -15,27 +15,23 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
   const [selectedSessionNumber, setSelectedSessionNumber] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   
   // 検索実行用の状態
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeMember, setActiveMember] = useState<Id<"councilMembers"> | null>(null);
   const [activeSessionNumber, setActiveSessionNumber] = useState("all");
-  const [activeSortBy, setActiveSortBy] = useState("newest");
 
-  // ページネーション対応のクエリ（questionsPagedSearchを使用）
-  const searchResults = useQuery(
-    api.questionsPagedSearch.searchWithPagination,
+  // ページネーション対応のクエリ
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.questionsPaginated.listPaginated,
     {
-      page: currentPage,
-      pageSize: 20,
       category: activeCategory === "all" ? undefined : activeCategory,
       memberId: activeMember || undefined,
       searchTerm: activeSearchQuery || undefined,
       sessionNumber: activeSessionNumber === "all" ? undefined : activeSessionNumber,
-      sortBy: activeSortBy,
-    }
+    },
+    { initialNumItems: 20 }
   );
 
   const councilMembers = useQuery(api.councilMembers.list, { activeOnly: true });
@@ -47,8 +43,6 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     setActiveCategory(selectedCategory);
     setActiveMember(selectedMember);
     setActiveSessionNumber(selectedSessionNumber);
-    setActiveSortBy(sortBy);
-    setCurrentPage(1); // 検索時はページを1に戻す
   };
 
   // フィルターリセット
@@ -57,21 +51,13 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     setSelectedCategory("all");
     setSelectedMember(null);
     setSelectedSessionNumber("all");
-    setSortBy("newest");
     setActiveSearchQuery("");
     setActiveCategory("all");
     setActiveMember(null);
     setActiveSessionNumber("all");
-    setActiveSortBy("newest");
-    setCurrentPage(1);
   };
 
-  // ページ変更
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  if (!searchResults) {
+  if (status === "LoadingFirstPage") {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -83,7 +69,22 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
   }
 
   // カテゴリー一覧を取得（現在の結果から）
-  const categories = Array.from(new Set(searchResults.questions.map(q => q.category))).sort();
+  const categories = Array.from(new Set(results.map(q => q.category))).sort();
+
+  // 質問をソートのみ（フィルタリングはサーバーサイドで実行済み）
+  const filteredQuestions = results
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return b.sessionDate - a.sessionDate;
+        case "oldest":
+          return a.sessionDate - b.sessionDate;
+        case "title":
+          return a.title.localeCompare(b.title, 'ja');
+        default:
+          return 0;
+      }
+    });
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -141,13 +142,11 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
                   className="auth-input-field text-sm"
                 >
                   <option value="all">すべて</option>
-                  <option value="政策・提案">政策・提案</option>
-                  <option value="予算・財政">予算・財政</option>
-                  <option value="教育・文化">教育・文化</option>
-                  <option value="福祉・医療">福祉・医療</option>
-                  <option value="環境・インフラ">環境・インフラ</option>
-                  <option value="産業・経済">産業・経済</option>
-                  <option value="その他">その他</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -232,11 +231,11 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
             📋 質問一覧
           </h2>
           <div className="text-sm text-gray-400">
-            {searchResults.pagination.totalCount}件中 {((searchResults.pagination.currentPage - 1) * searchResults.pagination.pageSize) + 1}〜{Math.min(searchResults.pagination.currentPage * searchResults.pagination.pageSize, searchResults.pagination.totalCount)}件を表示
+            {filteredQuestions.length}件の質問
           </div>
         </div>
 
-        {searchResults.questions.length === 0 ? (
+        {filteredQuestions.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-6xl mb-4">🔍</div>
             <p className="text-gray-400 text-lg">該当する質問が見つかりませんでした</p>
@@ -244,7 +243,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {searchResults.questions.map((question) => (
+            {filteredQuestions.map((question) => (
               <QuestionCard
                 key={question._id}
                 question={question}
@@ -252,55 +251,21 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
               />
             ))}
             
-            {/* ページネーション */}
-            {searchResults.pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center space-x-2 pt-6">
-                {/* 前のページボタン */}
+            {/* もっと読み込むボタン */}
+            {status === "CanLoadMore" && (
+              <div className="text-center pt-6">
                 <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={!searchResults.pagination.hasPrevPage}
-                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                    searchResults.pagination.hasPrevPage
-                      ? "bg-purple-600 hover:bg-purple-700 text-white"
-                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                  }`}
+                  onClick={() => loadMore(20)}
+                  className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
                 >
-                  ← 前
+                  さらに読み込む
                 </button>
-
-                {/* ページ番号 */}
-                {Array.from({ length: Math.min(5, searchResults.pagination.totalPages) }, (_, i) => {
-                  const startPage = Math.max(1, currentPage - 2);
-                  const pageNum = startPage + i;
-                  if (pageNum > searchResults.pagination.totalPages) return null;
-                  
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                        pageNum === currentPage
-                          ? "bg-yellow-500 text-black font-bold"
-                          : "bg-purple-600 hover:bg-purple-700 text-white"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                {/* 次のページボタン */}
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={!searchResults.pagination.hasNextPage}
-                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                    searchResults.pagination.hasNextPage
-                      ? "bg-purple-600 hover:bg-purple-700 text-white"
-                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  次 →
-                </button>
+              </div>
+            )}
+            
+            {status === "LoadingMore" && (
+              <div className="text-center py-4">
+                <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
               </div>
             )}
           </div>

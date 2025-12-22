@@ -14,7 +14,7 @@ export function RecentQuestions({ onQuestionClick }: RecentQuestionsProps = {}) 
   const handleLike = async (e: React.MouseEvent, questionId: Id<"questions">) => {
     e.stopPropagation();
     if (!user) {
-      alert("いいねするにはログインが必要です");
+      alert("気になるするにはログインが必要です");
       return;
     }
     try {
@@ -165,8 +165,8 @@ export function RecentQuestions({ onQuestionClick }: RecentQuestionsProps = {}) 
                     )}
                     
                     {question.likeCount > 0 && (
-                      <div className="flex items-center space-x-1 text-pink-600">
-                        <span>❤️</span>
+                      <div className="flex items-center space-x-1 text-orange-600">
+                        <span>🤔</span>
                         <span>{question.likeCount}</span>
                       </div>
                     )}
@@ -174,9 +174,9 @@ export function RecentQuestions({ onQuestionClick }: RecentQuestionsProps = {}) 
                   
                   <button
                     onClick={(e) => handleLike(e, question._id)}
-                    className="flex items-center space-x-1 text-pink-600 hover:text-pink-800 transition-colors"
+                    className="flex items-center space-x-1 text-orange-600 hover:text-orange-800 transition-colors"
                   >
-                    <span>{question.isLiked ? "❤️" : "🤍"}</span>
+                    <span>{question.isLiked ? "🤔" : "💭"}</span>
                     <span className="font-medium">{question.likeCount}</span>
                   </button>
                 </div>

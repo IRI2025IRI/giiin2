@@ -41,7 +41,9 @@ const applicationTables = {
     status: v.union(v.literal("pending"), v.literal("answered"), v.literal("archived")),
   })
     .index("by_council_member", ["councilMemberId"])
-    .index("by_session_date", ["sessionDate"]),
+    .index("by_session_date", ["sessionDate"])
+    .index("by_session_number", ["sessionNumber"])
+    .index("by_category", ["category"]),
 
   responses: defineTable({
     questionId: v.id("questions"),

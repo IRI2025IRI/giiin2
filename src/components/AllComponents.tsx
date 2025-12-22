@@ -419,6 +419,7 @@ export function QuestionsList({
 
   const questions = useQuery(api.questions.list, {
     category: selectedCategory === "all" ? undefined : selectedCategory,
+    status: selectedStatus === "all" ? undefined : selectedStatus,
     searchTerm: searchTerm || undefined,
   });
 
@@ -547,13 +548,13 @@ export function QuestionCard({
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!loggedInUser) {
-      toast.error("いいねするにはログインが必要です");
+      toast.error("気になるするにはログインが必要です");
       return;
     }
     try {
       await toggleLike({ questionId: question._id });
     } catch (error) {
-      toast.error("いいねの処理に失敗しました");
+      toast.error("気になるの処理に失敗しました");
     }
   };
 
@@ -613,11 +614,11 @@ export function QuestionCard({
                   onClick={handleLikeClick}
                   className={`flex items-center space-x-1 px-3 py-1 rounded-full transition-all duration-300 ${
                     userLike
-                      ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                      : "bg-gray-500/20 text-gray-400 hover:bg-red-500/20 hover:text-red-400"
+                      ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
+                      : "bg-gray-500/20 text-gray-400 hover:bg-orange-500/20 hover:text-orange-400"
                   }`}
                 >
-                  <span>{userLike ? "❤️" : "🤍"}</span>
+                  <span>{userLike ? "🤔" : "💭"}</span>
                   <span className="text-sm">{likeCount || 0}</span>
                 </button>
               </Authenticated>
