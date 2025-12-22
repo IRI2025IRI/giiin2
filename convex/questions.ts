@@ -10,6 +10,7 @@ export const list = query({
     memberId: v.optional(v.id("councilMembers")),
     councilMemberId: v.optional(v.id("councilMembers")), // 後方互換性のため
     searchTerm: v.optional(v.string()),
+    status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let questions;
@@ -32,22 +33,30 @@ export const list = query({
         .collect();
     }
     
-    // フィルタリング
+    // フィルタリング（データベースから取得した全データに対して）
+    let filteredQuestions = questions;
+    
     if (args.category) {
-      questions = questions.filter(q => q.category === args.category);
+      filteredQuestions = filteredQuestions.filter(q => q.category === args.category);
+    }
+    
+    if (args.status) {
+      filteredQuestions = filteredQuestions.filter(q => q.status === args.status);
     }
     
     if (args.searchTerm) {
       const searchLower = args.searchTerm.toLowerCase();
-      questions = questions.filter(q => 
-        q.title.toLowerCase().includes(searchLower) ||
-        q.content.toLowerCase().includes(searchLower)
-      );
+      filteredQuestions = filteredQuestions.filter(q => {
+        // タイトル、内容での検索
+        const titleMatch = q.title.toLowerCase().includes(searchLower);
+        const contentMatch = q.content.toLowerCase().includes(searchLower);
+        return titleMatch || contentMatch;
+      });
     }
     
     // 制限
     if (args.limit) {
-      questions = questions.slice(0, args.limit);
+      filteredQuestions = filteredQuestions.slice(0, args.limit);
     }
     
     // 議員情報を取得

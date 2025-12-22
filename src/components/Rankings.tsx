@@ -21,7 +21,7 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
 
   const handleLike = async (questionId: Id<"questions">) => {
     if (!user) {
-      alert("いいねするにはログインが必要です");
+      alert("気になるするにはログインが必要です");
       return;
     }
     try {
@@ -151,10 +151,10 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
           <div className="text-2xl font-bold">{questions.length}</div>
           <div className="text-green-100 text-sm">総質問数</div>
         </div>
-        <div className="bg-gradient-to-br from-pink-500 to-red-600 rounded-xl p-6 text-white">
-          <div className="text-2xl mb-2">❤️</div>
+        <div className="bg-gradient-to-br from-orange-500 to-yellow-600 rounded-xl p-6 text-white">
+          <div className="text-2xl mb-2">🤔</div>
           <div className="text-2xl font-bold">{questions.reduce((sum, q) => sum + (q.likeCount || 0), 0)}</div>
-          <div className="text-pink-100 text-sm">総いいね数</div>
+          <div className="text-orange-100 text-sm">総気になる数</div>
         </div>
         <div className="bg-gradient-to-br from-orange-500 to-yellow-600 rounded-xl p-6 text-white">
           <div className="text-2xl mb-2">📋</div>
@@ -283,10 +283,10 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
 
         {/* いいね数ランキング */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-pink-500 to-red-500 px-6 py-4">
+          <div className="bg-gradient-to-r from-orange-500 to-yellow-500 px-6 py-4">
             <h3 className="text-xl font-bold text-white flex items-center">
-              <span className="mr-2">❤️</span>
-              いいね数統計データ
+              <span className="mr-2">🤔</span>
+              気になる数統計データ
             </h3>
           </div>
           <div className="p-6">
@@ -314,14 +314,14 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-800 group-hover:text-pink-600 transition-colors">
+                    <h4 className="font-semibold text-gray-800 group-hover:text-orange-600 transition-colors">
                       {member.name}
                     </h4>
                     <p className="text-sm text-gray-600">{member.party || "無所属"}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-pink-600">{member.totalLikes}</div>
-                    <div className="text-xs text-gray-500">いいね</div>
+                    <div className="text-lg font-bold text-orange-600">{member.totalLikes}</div>
+                    <div className="text-xs text-gray-500">気になる</div>
                   </div>
                 </div>
               ))}
@@ -332,7 +332,7 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
               <div className="mt-6 text-center">
                 <button
                   onClick={() => setShowAllLikeRanking(!showAllLikeRanking)}
-                  className="px-6 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors font-medium"
+                  className="px-6 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors font-medium"
                 >
                   {showAllLikeRanking ? "上位10位のみ表示" : `全て表示 (${regularMembers.length}位まで)`}
                 </button>
@@ -383,7 +383,7 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
                       <span className="text-lg font-bold text-blue-600">{party.questionCount}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">総いいね数</span>
+                      <span className="text-sm text-gray-600">総気になる数</span>
                       <span className="text-lg font-bold text-pink-600">{party.totalLikes}</span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -432,19 +432,19 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
                 <div
                   key={question._id}
                   onClick={() => onQuestionClick?.(question._id)}
-                  className="group p-6 border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-pink-300"
+                  className="group p-6 border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer hover:border-orange-300"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className={`flex-shrink-0 w-10 h-10 bg-gradient-to-br ${rankInfo.color} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg`}>
                       {rankInfo.icon}
                     </div>
-                    <div className="flex items-center space-x-2 px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-sm font-medium">
-                      <span className="text-lg">❤️</span>
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                      <span className="text-lg">🤔</span>
                       <span className="font-bold">{question.likeCount}</span>
                     </div>
                   </div>
                   
-                  <h4 className="font-bold text-gray-800 mb-3 group-hover:text-pink-600 transition-colors text-base leading-tight">
+                  <h4 className="font-bold text-gray-800 mb-3 group-hover:text-orange-600 transition-colors text-base leading-tight">
                     {question.title}
                   </h4>
                   
@@ -489,11 +489,11 @@ export function Rankings({ onMemberClick, onQuestionClick }: RankingsProps = {})
                       disabled={!user}
                       className={`flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                         question.isLiked
-                          ? "bg-pink-100 text-pink-600"
+                          ? "bg-orange-100 text-orange-600"
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       } ${!user ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
-                      <span>{question.isLiked ? "❤️" : "🤍"}</span>
+                      <span>{question.isLiked ? "🤔" : "💭"}</span>
                     </button>
                   </div>
                 </div>

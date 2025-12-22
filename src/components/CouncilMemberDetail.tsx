@@ -191,9 +191,9 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
                   <div className="text-sm text-gray-300">今年の質問数</div>
                 </div>
                 <div className="amano-bg-glass p-6 rounded-lg text-center">
-                  <div className="text-3xl mb-2">👍</div>
+                  <div className="text-3xl mb-2">🤔</div>
                   <div className="text-2xl font-bold text-cyan-400">{memberStats.totalLikes}</div>
-                  <div className="text-sm text-gray-300">いいね数</div>
+                  <div className="text-sm text-gray-300">気になる数</div>
                 </div>
               </div>
             ) : (
