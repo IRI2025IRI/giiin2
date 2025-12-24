@@ -6,7 +6,6 @@ import { Id } from "../../convex/_generated/dataModel";
 interface SlideFormData {
   title: string;
   description: string;
-  imageUrl: string;
   linkUrl: string;
   backgroundColor: string;
   order: number;
@@ -22,129 +21,28 @@ export function SlideshowManagement() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<Id<"slideshowSlides"> | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [formData, setFormData] = useState<SlideFormData>({
     title: "",
     description: "",
-    imageUrl: "",
     linkUrl: "",
-    backgroundColor: "#1a0b3d",
+    backgroundColor: "#4c1d95",
     order: 1,
     isActive: true,
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // バリデーション
-    if (!formData.title.trim()) {
-      setSaveMessage("タイトルを入力してください。");
-      return;
-    }
-    if (!formData.description.trim()) {
-      setSaveMessage("説明を入力してください。");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSaveMessage("");
-    
-    try {
-      // データを整形（空文字列をundefinedに変換）
-      const submitData = {
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        imageUrl: formData.imageUrl.trim() || undefined,
-        linkUrl: formData.linkUrl.trim() || undefined,
-        backgroundColor: formData.backgroundColor,
-        order: formData.order,
-        isActive: formData.isActive,
-      };
-
-      console.log("送信データ:", submitData);
-
-      if (editingSlide) {
-        console.log("更新中:", editingSlide);
-        await updateSlide({
-          slideId: editingSlide,
-          ...submitData,
-        });
-        setSaveMessage("スライドを更新しました！");
-      } else {
-        console.log("新規作成中");
-        await createSlide(submitData);
-        setSaveMessage("スライドを作成しました！");
-      }
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
       
-      // 成功時は少し待ってからフォームをリセット
-      setTimeout(() => {
-        resetForm();
-        setSaveMessage("");
-      }, 2000);
-      
-    } catch (error) {
-      console.error("スライドの保存に失敗しました:", error);
-      const errorMessage = error instanceof Error ? error.message : "保存に失敗しました。もう一度お試しください。";
-      setSaveMessage(`エラー: ${errorMessage}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // 画像ファイルかチェック
-    if (!file.type.startsWith('image/')) {
-      alert('画像ファイルを選択してください。');
-      return;
-    }
-
-    // ファイルサイズチェック（5MB制限）
-    if (file.size > 5 * 1024 * 1024) {
-      alert('ファイルサイズは5MB以下にしてください。');
-      return;
-    }
-
-    setUploadingImage(true);
-    try {
-      // アップロードURLを取得
-      const postUrl = await generateUploadUrl();
-      
-      // ファイルをアップロード
-      const result = await fetch(postUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      
-      const json = await result.json();
-      if (!result.ok) {
-        throw new Error(`Upload failed: ${JSON.stringify(json)}`);
-      }
-      
-      const { storageId } = json;
-      
-      // Convex storageのURLを使用
-      const imageUrl = `/api/storage/${storageId}`;
-      
-      setFormData(prev => ({ ...prev, imageUrl }));
-      
-    } catch (error) {
-      console.error("画像のアップロードに失敗しました:", error);
-      alert("画像のアップロードに失敗しました。もう一度お試しください。");
-    } finally {
-      setUploadingImage(false);
-      // ファイル入力をリセット
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      // プレビュー用のURLを作成
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
     }
   };
 
@@ -152,33 +50,79 @@ export function SlideshowManagement() {
     setFormData({
       title: "",
       description: "",
-      imageUrl: "",
       linkUrl: "",
-      backgroundColor: "#1a0b3d",
-      order: Math.max(1, (slides?.length || 0) + 1), // 自動で次の順序を設定
+      backgroundColor: "#4c1d95",
+      order: 1,
       isActive: true,
     });
+    setSelectedImage(null);
+    setImagePreview(null);
     setEditingSlide(null);
-    setIsFormOpen(false);
-    setSaveMessage("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const handleEdit = (slide: any) => {
+    setEditingSlide(slide._id);
     setFormData({
       title: slide.title,
       description: slide.description,
-      imageUrl: slide.imageUrl || "",
       linkUrl: slide.linkUrl || "",
       backgroundColor: slide.backgroundColor,
       order: slide.order,
       isActive: slide.isActive,
     });
-    setEditingSlide(slide._id);
+    setImagePreview(slide.imageUrl || null);
     setIsFormOpen(true);
-    setSaveMessage("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      let imageId: Id<"_storage"> | undefined;
+
+      // 新しい画像がアップロードされた場合
+      if (selectedImage) {
+        const postUrl = await generateUploadUrl();
+        const result = await fetch(postUrl, {
+          method: "POST",
+          headers: { "Content-Type": selectedImage.type },
+          body: selectedImage,
+        });
+        
+        if (!result.ok) {
+          const errorText = await result.text();
+          throw new Error(`Upload failed: ${result.status} ${errorText}`);
+        }
+        
+        const json = await result.json();
+        imageId = json.storageId;
+      }
+
+      if (editingSlide) {
+        await updateSlide({
+          slideId: editingSlide,
+          ...formData,
+          ...(imageId && { imageId }),
+        });
+      } else {
+        await createSlide({
+          ...formData,
+          ...(imageId && { imageId }),
+        });
+      }
+
+      resetForm();
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error("Error saving slide:", error);
+      alert(`スライドの保存に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async (slideId: Id<"slideshowSlides">) => {
@@ -186,7 +130,8 @@ export function SlideshowManagement() {
       try {
         await deleteSlide({ slideId });
       } catch (error) {
-        console.error("スライドの削除に失敗しました:", error);
+        console.error("Error deleting slide:", error);
+        alert("スライドの削除に失敗しました");
       }
     }
   };
@@ -195,7 +140,7 @@ export function SlideshowManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-yellow-400 amano-text-glow">
-          🎭 スライドショー管理
+          🎬 スライドショー管理
         </h2>
         <button
           onClick={() => {
@@ -209,85 +154,90 @@ export function SlideshowManagement() {
       </div>
 
       {/* スライド一覧 */}
-      <div className="grid gap-4">
-        {slides.map((slide) => (
-          <div
-            key={slide._id}
-            className="amano-bg-card rounded-xl p-6 amano-crystal-border"
-          >
-            <div className="flex items-start space-x-4">
-              {slide.imageUrl && (
-                <img
-                  src={slide.imageUrl}
-                  alt={slide.title}
-                  className="w-24 h-16 object-cover rounded-lg"
-                />
-              )}
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h3 className="text-lg font-bold text-yellow-400">
-                    {slide.title}
-                  </h3>
-                  <span className="text-sm text-gray-400">順序: {slide.order}</span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      slide.isActive
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-red-500/20 text-red-400"
-                    }`}
-                  >
-                    {slide.isActive ? "表示中" : "非表示"}
-                  </span>
+      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
+        <h3 className="text-lg font-bold text-yellow-400 mb-4">現在のスライド</h3>
+        {slides.length === 0 ? (
+          <p className="text-gray-400 text-center py-8">スライドがありません</p>
+        ) : (
+          <div className="space-y-4">
+            {slides.map((slide) => (
+              <div
+                key={slide._id}
+                className="amano-bg-glass p-4 rounded-lg border border-purple-500/20"
+              >
+                <div className="flex items-start space-x-4">
+                  {slide.imageUrl && (
+                    <img
+                      src={slide.imageUrl}
+                      alt={slide.title}
+                      className="w-24 h-16 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h4 className="font-bold text-white">{slide.title}</h4>
+                      <span className="text-sm text-gray-400">#{slide.order}</span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          slide.isActive
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-red-500/20 text-red-400"
+                        }`}
+                      >
+                        {slide.isActive ? "有効" : "無効"}
+                      </span>
+                    </div>
+                    <p className="text-gray-300 text-sm mb-2">{slide.description}</p>
+                    {slide.linkUrl && (
+                      <a
+                        href={slide.linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-400 hover:text-yellow-400 text-sm"
+                      >
+                        {slide.linkUrl}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(slide)}
+                      className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
+                    >
+                      編集
+                    </button>
+                    <button
+                      onClick={() => handleDelete(slide._id)}
+                      className="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
+                    >
+                      削除
+                    </button>
+                  </div>
                 </div>
-                <p className="text-gray-300 text-sm mb-2">{slide.description}</p>
-                {slide.linkUrl && (
-                  <a
-                    href={slide.linkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyan-400 hover:text-yellow-400 text-sm transition-colors"
-                  >
-                    リンク先を確認 ↗
-                  </a>
-                )}
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleEdit(slide)}
-                  className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30 transition-colors"
-                >
-                  編集
-                </button>
-                <button
-                  onClick={() => handleDelete(slide._id)}
-                  className="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
-                >
-                  削除
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
       {/* フォームモーダル */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="amano-bg-card rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto amano-crystal-border">
-            <h3 className="text-xl font-bold text-yellow-400 mb-6 amano-text-glow">
-              {editingSlide ? "スライド編集" : "新規スライド作成"}
-            </h3>
-
-            {/* 保存メッセージ */}
-            {saveMessage && (
-              <div className={`mb-4 p-3 rounded-lg ${
-                saveMessage.includes("失敗") || saveMessage.includes("入力")
-                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                  : "bg-green-500/20 text-green-400 border border-green-500/30"
-              }`}>
-                {saveMessage}
-              </div>
-            )}
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-yellow-400">
+                {editingSlide ? "スライド編集" : "新規スライド作成"}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsFormOpen(false);
+                  resetForm();
+                }}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -297,9 +247,7 @@ export function SlideshowManagement() {
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="auth-input-field"
                   required
                 />
@@ -311,9 +259,7 @@ export function SlideshowManagement() {
                 </label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="auth-input-field h-24 resize-none"
                   required
                 />
@@ -321,49 +267,22 @@ export function SlideshowManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  画像URL
+                  画像
                 </label>
                 <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, imageUrl: e.target.value })
-                  }
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
                   className="auth-input-field"
-                  placeholder="https://example.com/image.jpg"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  または画像をアップロード
-                </label>
-                <div className="flex items-center space-x-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {uploadingImage ? "アップロード中..." : "画像を選択"}
-                  </button>
-                  <span className="text-sm text-gray-400">
-                    JPG, PNG, GIF (最大5MB)
-                  </span>
-                </div>
-                {formData.imageUrl && (
+                {imagePreview && (
                   <div className="mt-3">
+                    <p className="text-sm text-gray-400 mb-2">プレビュー:</p>
                     <img
-                      src={formData.imageUrl}
+                      src={imagePreview}
                       alt="プレビュー"
-                      className="w-32 h-20 object-cover rounded-lg border border-purple-500/30"
+                      className="w-full max-w-md h-32 object-cover rounded-lg border border-purple-500/30"
                     />
                   </div>
                 )}
@@ -376,9 +295,7 @@ export function SlideshowManagement() {
                 <input
                   type="url"
                   value={formData.linkUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, linkUrl: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
                   className="auth-input-field"
                   placeholder="https://example.com"
                 />
@@ -391,10 +308,8 @@ export function SlideshowManagement() {
                 <input
                   type="color"
                   value={formData.backgroundColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, backgroundColor: e.target.value })
-                  }
-                  className="w-full h-12 rounded-lg border-2 border-purple-500/30 bg-transparent cursor-pointer"
+                  onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
+                  className="w-full h-12 rounded-lg border border-purple-500/30 bg-transparent"
                 />
               </div>
 
@@ -407,9 +322,7 @@ export function SlideshowManagement() {
                     type="number"
                     min="1"
                     value={formData.order}
-                    onChange={(e) =>
-                      setFormData({ ...formData, order: parseInt(e.target.value) })
-                    }
+                    onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
                     className="auth-input-field"
                     required
                   />
@@ -417,35 +330,36 @@ export function SlideshowManagement() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    表示状態
+                    状態
                   </label>
                   <select
-                    value={formData.isActive ? "true" : "false"}
-                    onChange={(e) =>
-                      setFormData({ ...formData, isActive: e.target.value === "true" })
-                    }
+                    value={formData.isActive ? "active" : "inactive"}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.value === "active" })}
                     className="auth-input-field"
                   >
-                    <option value="true">表示</option>
-                    <option value="false">非表示</option>
+                    <option value="active">有効</option>
+                    <option value="inactive">無効</option>
                   </select>
                 </div>
               </div>
 
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting || uploadingImage}
-                  className="flex-1 auth-button disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? "保存中..." : editingSlide ? "更新" : "作成"}
-                </button>
+              <div className="flex space-x-4 pt-4">
                 <button
                   type="button"
-                  onClick={resetForm}
-                  className="px-6 py-3 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/10 transition-colors"
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    resetForm();
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 auth-button disabled:opacity-50"
+                >
+                  {isSubmitting ? "保存中..." : editingSlide ? "更新" : "作成"}
                 </button>
               </div>
             </form>
