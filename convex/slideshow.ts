@@ -83,6 +83,7 @@ export const create = mutation({
     title: v.string(),
     description: v.string(),
     imageUrl: v.optional(v.string()),
+    imageId: v.optional(v.id("_storage")),
     linkUrl: v.optional(v.string()),
     backgroundColor: v.string(),
     order: v.number(),
@@ -104,9 +105,11 @@ export const create = mutation({
       throw new Error("管理者権限が必要です");
     }
 
-    // imageUrlからstorageIdを抽出してimageIdとして保存
-    let imageId = undefined;
-    if (args.imageUrl && args.imageUrl.includes('/api/storage/')) {
+    // 新しくアップロードされた画像IDがある場合はそれを使用
+    let finalImageId = args.imageId;
+    
+    // imageUrlからstorageIdを抽出してimageIdとして保存（後方互換性のため）
+    if (!finalImageId && args.imageUrl && args.imageUrl.includes('/api/storage/')) {
       try {
         const urlParts = args.imageUrl.split('/');
         const storageIdPart = urlParts[urlParts.length - 1];
@@ -115,7 +118,7 @@ export const create = mutation({
           try {
             const storageDoc = await ctx.db.system.get(storageIdPart as any);
             if (storageDoc) {
-              imageId = storageIdPart as any;
+              finalImageId = storageIdPart as any;
             }
           } catch (storageError) {
             console.error("Storage ID検証エラー:", storageError);
@@ -128,7 +131,7 @@ export const create = mutation({
 
     return await ctx.db.insert("slideshowSlides", {
       ...args,
-      imageId,
+      imageId: finalImageId,
       createdBy: userId,
     });
   },
@@ -140,6 +143,7 @@ export const update = mutation({
     title: v.string(),
     description: v.string(),
     imageUrl: v.optional(v.string()),
+    imageId: v.optional(v.id("_storage")),
     linkUrl: v.optional(v.string()),
     backgroundColor: v.string(),
     order: v.number(),
@@ -161,9 +165,11 @@ export const update = mutation({
       throw new Error("管理者権限が必要です");
     }
 
-    // imageUrlからstorageIdを抽出してimageIdとして保存
-    let imageId = undefined;
-    if (args.imageUrl && args.imageUrl.includes('/api/storage/')) {
+    // 新しくアップロードされた画像IDがある場合はそれを使用
+    let finalImageId = args.imageId;
+    
+    // imageUrlからstorageIdを抽出してimageIdとして保存（後方互換性のため）
+    if (!finalImageId && args.imageUrl && args.imageUrl.includes('/api/storage/')) {
       try {
         const urlParts = args.imageUrl.split('/');
         const storageIdPart = urlParts[urlParts.length - 1];
@@ -172,7 +178,7 @@ export const update = mutation({
           try {
             const storageDoc = await ctx.db.system.get(storageIdPart as any);
             if (storageDoc) {
-              imageId = storageIdPart as any;
+              finalImageId = storageIdPart as any;
             }
           } catch (storageError) {
             console.error("Storage ID検証エラー:", storageError);
@@ -186,7 +192,7 @@ export const update = mutation({
     const { slideId, ...updateData } = args;
     return await ctx.db.patch(slideId, {
       ...updateData,
-      imageId,
+      imageId: finalImageId,
       updatedBy: userId,
     });
   },

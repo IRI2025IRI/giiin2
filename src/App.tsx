@@ -294,7 +294,7 @@ function AppContent() {
                 <CouncilMemberList onMemberClick={handleMemberClick} />
               );
             case "rankings":
-              return <Rankings onMemberClick={handleMemberClick} />;
+              return <Rankings onMemberClick={handleMemberClick} onQuestionClick={handleQuestionClick} />;
             case "news":
               return <News onNewsClick={handleNewsClick} />;
             case "newsDetail":
