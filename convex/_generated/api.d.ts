@@ -24,6 +24,7 @@ import type * as externalArticles from "../externalArticles.js";
 import type * as faq from "../faq.js";
 import type * as faqSampleData from "../faqSampleData.js";
 import type * as http from "../http.js";
+import type * as imageManagement from "../imageManagement.js";
 import type * as likes from "../likes.js";
 import type * as menuSettings from "../menuSettings.js";
 import type * as news from "../news.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   faq: typeof faq;
   faqSampleData: typeof faqSampleData;
   http: typeof http;
+  imageManagement: typeof imageManagement;
   likes: typeof likes;
   menuSettings: typeof menuSettings;
   news: typeof news;
