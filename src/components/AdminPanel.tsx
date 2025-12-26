@@ -5,147 +5,53 @@ import { MemberManagement } from "./MemberManagement";
 import { QuestionManagement } from "./QuestionManagement";
 import { NewsManagement } from "./NewsManagement";
 import { UserManagement } from "./UserManagement";
-import { UserStatistics } from "./UserStatistics";
-import { ContactManagement } from "./ContactManagement";
-import { FAQManagement } from "./FAQManagement";
-import { ExternalArticleManagement } from "./ExternalArticleManagement";
 import { SlideshowManagement } from "./SlideshowManagement";
+import { FAQManagement } from "./FAQManagement";
+import { ContactManagement } from "./ContactManagement";
 import { MenuManagement } from "./MenuManagement";
+import { ExternalArticleManagement } from "./ExternalArticleManagement";
 import { DataMigration } from "./DataMigration";
 import { CleanupManagement } from "./CleanupManagement";
+import { UserStatistics } from "./UserStatistics";
+import { ImageManagement } from "./ImageManagement";
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("members");
   
-  const isAdmin = useQuery(api.admin.isAdmin);
-  const isSuperAdmin = useQuery(api.admin.isSuperAdmin);
+  // ユーザーの役割を取得
+  const userRole = useQuery(api.admin.getUserRole);
   
-  // 管理者権限がある場合のみ統計情報を取得
-  const stats = useQuery(api.admin.getStats, isAdmin ? {} : "skip");
-  const userStats = useQuery(api.admin.getUserStats, isAdmin ? {} : "skip");
-
-  // 管理者権限がない場合はアクセス拒否
-  if (isAdmin === false) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🚫</div>
-          <h2 className="text-2xl font-bold text-red-400 mb-2">アクセス拒否</h2>
-          <p className="text-gray-400">管理者権限が必要です</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ローディング中
-  if (isAdmin === undefined) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
-      </div>
-    );
-  }
+  // スーパー管理者のみアクセス可能な機能
+  const isSuperAdmin = userRole === "superAdmin";
 
   const tabs = [
-    { id: "overview", name: "概要", icon: "📊" },
     { id: "members", name: "議員管理", icon: "👥" },
     { id: "questions", name: "質問管理", icon: "❓" },
     { id: "news", name: "お知らせ管理", icon: "📢" },
-    { id: "articles", name: "記事管理", icon: "📰" },
-    { id: "slideshow", name: "スライドショー", icon: "🖼️" },
+    { id: "images", name: "画像管理", icon: "🖼️" },
+    { id: "slideshow", name: "スライドショー", icon: "🎬" },
     { id: "faq", name: "FAQ管理", icon: "💡" },
     { id: "contact", name: "お問い合わせ", icon: "📧" },
     { id: "menu", name: "メニュー設定", icon: "🔧" },
-    { id: "users", name: "ユーザー管理", icon: "👤" },
-    { id: "userStats", name: "ユーザー統計", icon: "📈" },
-    { id: "cleanup", name: "データクリーンアップ", icon: "🧹" },
-    ...(isSuperAdmin ? [{ id: "migration", name: "データ移行", icon: "🔄" }] : []),
+    { id: "external", name: "外部記事管理", icon: "📰" },
+    ...(isSuperAdmin ? [
+      { id: "users", name: "ユーザー管理", icon: "👤" },
+      { id: "statistics", name: "統計情報", icon: "📊" },
+      { id: "migration", name: "データ移行", icon: "🔄" },
+      { id: "cleanup", name: "データクリーンアップ", icon: "🧹" },
+    ] : []),
   ];
 
-  const renderTabContent = () => {
+  const renderContent = () => {
     switch (activeTab) {
-      case "overview":
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">👥</span>
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-400">{stats?.memberCount || 0}</p>
-                    <p className="text-gray-400 text-sm">議員数</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">❓</span>
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-400">{stats?.questionCount || 0}</p>
-                    <p className="text-gray-400 text-sm">質問数</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">👤</span>
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-400">{stats?.userCount || 0}</p>
-                    <p className="text-gray-400 text-sm">ユーザー数</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">📢</span>
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-400">{stats?.newsCount || 0}</p>
-                    <p className="text-gray-400 text-sm">お知らせ数</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 統計情報がロード中の場合の表示 */}
-            {!stats && isAdmin && (
-              <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-                <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
-                </div>
-              </div>
-            )}
-
-            {stats?.recentQuestions && stats.recentQuestions.length > 0 && (
-              <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-                <h3 className="text-xl font-bold text-yellow-400 mb-4">最近の質問</h3>
-                <div className="space-y-3">
-                  {stats.recentQuestions.map((question) => (
-                    <div key={question._id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
-                      <div>
-                        <p className="font-medium text-gray-200">{question.title}</p>
-                        <p className="text-sm text-gray-400">質問ID: {question._id}</p>
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {new Date(question.sessionDate).toLocaleDateString("ja-JP")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
       case "members":
         return <MemberManagement />;
       case "questions":
         return <QuestionManagement />;
       case "news":
         return <NewsManagement />;
-      case "articles":
-        return <ExternalArticleManagement />;
+      case "images":
+        return <ImageManagement />;
       case "slideshow":
         return <SlideshowManagement />;
       case "faq":
@@ -154,16 +60,18 @@ export function AdminPanel() {
         return <ContactManagement />;
       case "menu":
         return <MenuManagement />;
+      case "external":
+        return <ExternalArticleManagement />;
       case "users":
-        return <UserManagement />;
-      case "userStats":
-        return <UserStatistics />;
-      case "cleanup":
-        return <CleanupManagement />;
+        return isSuperAdmin ? <UserManagement /> : <div>アクセス権限がありません</div>;
+      case "statistics":
+        return isSuperAdmin ? <UserStatistics /> : <div>アクセス権限がありません</div>;
       case "migration":
-        return isSuperAdmin ? <DataMigration /> : null;
+        return isSuperAdmin ? <DataMigration /> : <div>アクセス権限がありません</div>;
+      case "cleanup":
+        return isSuperAdmin ? <CleanupManagement /> : <div>アクセス権限がありません</div>;
       default:
-        return <div>タブが見つかりません</div>;
+        return <MemberManagement />;
     }
   };
 
@@ -174,12 +82,12 @@ export function AdminPanel() {
           🛠️ 管理パネル
         </h1>
         <div className="text-sm text-gray-400">
-          権限: {isSuperAdmin ? "スーパー管理者" : "管理者"}
+          権限: {userRole === "superAdmin" ? "🔧 スーパー管理者" : "⚙️ 管理者"}
         </div>
       </div>
 
       {/* タブナビゲーション */}
-      <div className="amano-bg-card rounded-xl p-2 amano-crystal-border">
+      <div className="amano-bg-card rounded-xl p-4 amano-crystal-border">
         <div className="flex flex-wrap gap-2">
           {tabs.map((tab) => (
             <button
@@ -187,20 +95,20 @@ export function AdminPanel() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${
                 activeTab === tab.id
-                  ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg"
+                  ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
                   : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
               }`}
             >
               <span>{tab.icon}</span>
-              <span className="hidden sm:inline">{tab.name}</span>
+              <span>{tab.name}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* タブコンテンツ */}
-      <div className="min-h-[400px]">
-        {renderTabContent()}
+      {/* コンテンツエリア */}
+      <div className="min-h-[600px]">
+        {renderContent()}
       </div>
     </div>
   );
