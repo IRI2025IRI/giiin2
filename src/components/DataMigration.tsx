@@ -89,7 +89,7 @@ export function DataMigration() {
             slideshowSlides: "スライドショー",
             faqItems: "FAQ",
             contactMessages: "お問い合わせ",
-            likes: "いいね",
+            likes: "気になる",
             userDemographics: "ユーザー属性"
           };
           
@@ -167,7 +167,7 @@ export function DataMigration() {
               • スライドショー (slideshowSlides)<br/>
               • FAQ (faqItems)<br/>
               • お問い合わせ (contactMessages)<br/>
-              • いいね情報 (likes)<br/>
+              • 気になる情報 (likes)<br/>
               • ユーザー属性 (userDemographics)
             </p>
           </div>
@@ -299,7 +299,7 @@ export function DataMigration() {
               <li>議員データを最初にインポートし、IDマッピングを作成</li>
               <li>質問データで議員との関連付けを確実に実行</li>
               <li>回答データで質問との関連付けを確実に実行</li>
-              <li>いいねデータで質問IDの関連付けを確認</li>
+              <li>気になるデータで質問IDの関連付けを確認</li>
               <li>エクスポート時に関連情報（議員名、質問タイトル）を含める</li>
             </ul>
           </div>

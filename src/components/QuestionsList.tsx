@@ -36,6 +36,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
 
   const councilMembers = useQuery(api.councilMembers.list, { activeOnly: true });
   const sessionNumbers = useQuery(api.questions.getSessionNumbers);
+  const categories = useQuery(api.questions.getCategories);
 
   // 検索実行
   const handleSearch = () => {
@@ -68,8 +69,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     );
   }
 
-  // カテゴリー一覧を取得（現在の結果から）
-  const categories = Array.from(new Set(results.map(q => q.category))).sort();
+  // カテゴリー一覧はデータベースから取得済み
 
   // 質問をソートのみ（フィルタリングはサーバーサイドで実行済み）
   const filteredQuestions = results
@@ -142,7 +142,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
                   className="auth-input-field text-sm"
                 >
                   <option value="all">すべて</option>
-                  {categories.map((category) => (
+                  {categories?.map((category) => (
                     <option key={category} value={category}>
                       {category}
                     </option>
