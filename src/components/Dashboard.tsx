@@ -185,7 +185,7 @@ export function Dashboard({ onMemberClick, onNewsClick, onViewChange, onQuestion
             <div className="text-4xl mb-4">💬</div>
             <h3 className="font-bold text-gray-200 mb-2">3. 参加</h3>
             <p className="text-sm text-gray-400">
-              いいね機能で関心のある質問を評価できます
+              気になる機能で関心のある質問を評価できます
             </p>
           </div>
         </div>

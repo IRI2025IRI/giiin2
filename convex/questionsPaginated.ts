@@ -14,7 +14,7 @@ export const listPaginated = query({
   handler: async (ctx, args) => {
     let queryBuilder;
     
-    // 最も効率的なインデックスを選択
+    // 最も効率的なインデックスを選択（優先順位: 会議番号 > 議員 > カテゴリー）
     if (args.sessionNumber) {
       queryBuilder = ctx.db
         .query("questions")
@@ -42,9 +42,20 @@ export const listPaginated = query({
     // ページネーション適用
     const result = await queryBuilder.order("desc").paginate(args.paginationOpts);
     
-    // 追加フィルタリング（検索のみ）
+    // 追加フィルタリング（インデックスで使用されなかった条件を適用）
     let filteredQuestions = result.page;
     
+    // カテゴリーフィルター（カテゴリーインデックスを使用していない場合）
+    if (args.category && (args.sessionNumber || args.memberId)) {
+      filteredQuestions = filteredQuestions.filter(q => q.category === args.category);
+    }
+    
+    // 議員フィルター（議員インデックスを使用していない場合）
+    if (args.memberId && args.sessionNumber) {
+      filteredQuestions = filteredQuestions.filter(q => q.councilMemberId === args.memberId);
+    }
+    
+    // 検索フィルター（常に適用）
     if (args.searchTerm) {
       const searchLower = args.searchTerm.toLowerCase();
       filteredQuestions = filteredQuestions.filter(q => 

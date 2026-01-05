@@ -142,7 +142,7 @@ export function CouncilMemberList({ onMemberClick }: CouncilMemberListProps) {
                   <option value="name">名前順</option>
                   <option value="group">会派順</option>
                   <option value="questions">質問数順</option>
-                  <option value="likes">いいね数順</option>
+                  <option value="likes">気になる数順</option>
                 </select>
               </div>
 
@@ -192,7 +192,7 @@ export function CouncilMemberList({ onMemberClick }: CouncilMemberListProps) {
         </h3>
         <div className="text-gray-300 text-sm sm:text-base space-y-2">
           <p>
-            議員情報・写真は
+            議員情報は
             <a 
               href="https://www.city.mihara.hiroshima.jp/site/gikai/" 
               target="_blank" 
@@ -202,9 +202,6 @@ export function CouncilMemberList({ onMemberClick }: CouncilMemberListProps) {
               三原市議会公式サイト
             </a>
             から取得しています。
-          </p>
-          <p className="text-xs text-gray-400">
-            ※ 議員の写真・プロフィール情報等の著作権は三原市に帰属します
           </p>
           <p className="text-xs text-gray-400">
             ※ 最新の正確な情報については、必ず公式サイトをご確認ください
