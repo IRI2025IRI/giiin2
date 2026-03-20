@@ -29,6 +29,7 @@ import type * as likes from "../likes.js";
 import type * as menuSettings from "../menuSettings.js";
 import type * as news from "../news.js";
 import type * as questions from "../questions.js";
+import type * as questionsPagedSearch from "../questionsPagedSearch.js";
 import type * as questionsPaginated from "../questionsPaginated.js";
 import type * as router from "../router.js";
 import type * as sampleData from "../sampleData.js";
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   menuSettings: typeof menuSettings;
   news: typeof news;
   questions: typeof questions;
+  questionsPagedSearch: typeof questionsPagedSearch;
   questionsPaginated: typeof questionsPaginated;
   router: typeof router;
   sampleData: typeof sampleData;

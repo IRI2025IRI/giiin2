@@ -16,19 +16,20 @@ export const searchWithPagination = query({
     const pageSize = args.pageSize || 20;
     const offset = (args.page - 1) * pageSize;
     
-    let query = ctx.db.query("questions");
-    
-    // インデックスを使用してフィルタリング
-    if (args.memberId) {
-      query = query.withIndex("by_council_member", (q) => 
-        q.eq("councilMemberId", args.memberId!)
-      );
-    } else {
-      query = query.withIndex("by_session_date");
-    }
-    
     // 全ての質問を取得してフィルタリング
-    let allQuestions = await query.order("desc").collect();
+    let allQuestions = args.memberId
+      ? await ctx.db
+          .query("questions")
+          .withIndex("by_council_member", (q) =>
+            q.eq("councilMemberId", args.memberId!)
+          )
+          .order("desc")
+          .collect()
+      : await ctx.db
+          .query("questions")
+          .withIndex("by_session_date")
+          .order("desc")
+          .collect();
     
     // カテゴリーフィルター
     if (args.category) {
