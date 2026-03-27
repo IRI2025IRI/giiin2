@@ -1,18 +1,43 @@
 import { useState, useRef } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
 
 interface NewsFormProps {
   news?: any;
   onClose: () => void;
 }
 
+// タイムスタンプ → datetime-local 入力値 (YYYY-MM-DDTHH:MM)
+function toDatetimeLocal(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// datetime-local 入力値 → タイムスタンプ
+function fromDatetimeLocal(value: string): number {
+  return new Date(value).getTime();
+}
+
+type PublishMode = "immediate" | "scheduled" | "draft";
+
+function getInitialMode(news: any): PublishMode {
+  if (!news) return "immediate";
+  if (!news.isPublished) return "draft";
+  if (news.scheduledPublishDate && news.scheduledPublishDate > Date.now()) return "scheduled";
+  return "immediate";
+}
+
 export function NewsForm({ news, onClose }: NewsFormProps) {
   const [title, setTitle] = useState(news?.title || "");
   const [content, setContent] = useState(news?.content || "");
   const [category, setCategory] = useState(news?.category || "重要なお知らせ");
-  const [isPublished, setIsPublished] = useState(news?.isPublished ?? true);
+  const [publishMode, setPublishMode] = useState<PublishMode>(getInitialMode(news));
+  const [scheduledDatetime, setScheduledDatetime] = useState<string>(
+    news?.scheduledPublishDate
+      ? toDatetimeLocal(news.scheduledPublishDate)
+      : toDatetimeLocal(Date.now() + 60 * 60 * 1000) // デフォルト1時間後
+  );
   const [thumbnailUrl, setThumbnailUrl] = useState(news?.thumbnailUrl || "");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,20 +60,13 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
   const handleThumbnailUpload = async (file: File) => {
     setIsUploading(true);
     try {
-      // アップロードURL生成
       const uploadUrl = await generateUploadUrl();
-      
-      // ファイルをアップロード
       const result = await fetch(uploadUrl, {
         method: "POST",
         headers: { "Content-Type": file.type },
         body: file,
       });
-      
-      if (!result.ok) {
-        throw new Error("アップロードに失敗しました");
-      }
-      
+      if (!result.ok) throw new Error("アップロードに失敗しました");
       const { storageId } = await result.json();
       return storageId;
     } catch (error) {
@@ -64,11 +82,17 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
+    if (publishMode === "scheduled") {
+      const ts = fromDatetimeLocal(scheduledDatetime);
+      if (isNaN(ts) || ts <= Date.now()) {
+        alert("予約日時は現在より未来の日時を指定してください。");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       let thumbnailId = news?.thumbnailId || null;
-      
-      // 新しい画像ファイルがある場合はアップロード
       if (thumbnailFile) {
         thumbnailId = await handleThumbnailUpload(thumbnailFile);
         if (!thumbnailId) {
@@ -77,25 +101,26 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
         }
       }
 
+      const isPublished = publishMode !== "draft";
+      const scheduledPublishDate =
+        publishMode === "scheduled"
+          ? fromDatetimeLocal(scheduledDatetime)
+          : undefined;
+
       const newsData = {
         title: title.trim(),
         content: content.trim(),
         category,
         isPublished,
+        scheduledPublishDate,
         thumbnailUrl: thumbnailUrl.trim() || undefined,
         thumbnailId: thumbnailId || undefined,
       };
 
       if (news) {
-        await updateNews({
-          id: news._id,
-          ...newsData,
-        });
+        await updateNews({ id: news._id, ...newsData });
       } else {
-        await createNews({
-          ...newsData,
-          publishDate: Date.now(),
-        });
+        await createNews({ ...newsData, publishDate: Date.now() });
       }
       onClose();
     } catch (error) {
@@ -108,7 +133,6 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
 
   const handleDelete = async () => {
     if (!news) return;
-    
     if (confirm("このお知らせを削除してもよろしいですか？")) {
       setIsSubmitting(true);
       try {
@@ -126,20 +150,15 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // ファイルサイズチェック（5MB制限）
       if (file.size > 5 * 1024 * 1024) {
         alert("ファイルサイズは5MB以下にしてください");
         return;
       }
-      
-      // ファイル形式チェック
       if (!file.type.startsWith("image/")) {
         alert("画像ファイルを選択してください");
         return;
       }
-      
       setThumbnailFile(file);
-      // URLフィールドをクリア
       setThumbnailUrl("");
     }
   };
@@ -147,9 +166,7 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
   const clearThumbnail = () => {
     setThumbnailFile(null);
     setThumbnailUrl("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -206,9 +223,7 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
                   required
                 >
                   {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
@@ -218,8 +233,7 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   サムネイル画像
                 </label>
-                
-                {/* 現在の画像表示 */}
+
                 {(news?.thumbnailUrl || thumbnailUrl || thumbnailFile) && (
                   <div className="mb-4">
                     <div className="relative inline-block">
@@ -247,7 +261,6 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
                   </div>
                 )}
 
-                {/* ファイルアップロード */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm text-gray-400 mb-2">
@@ -265,7 +278,6 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
 
                   <div className="text-center text-gray-500">または</div>
 
-                  {/* URL入力 */}
                   <div>
                     <label className="block text-sm text-gray-400 mb-2">
                       画像URLを入力
@@ -276,9 +288,7 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
                       onChange={(e) => {
                         setThumbnailUrl(e.target.value);
                         setThumbnailFile(null);
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = "";
-                        }
+                        if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
                       className="auth-input-field"
                       placeholder="https://example.com/image.jpg"
@@ -307,26 +317,100 @@ export function NewsForm({ news, onClose }: NewsFormProps) {
               </div>
 
               {/* 公開設定 */}
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="isPublished"
-                  checked={isPublished}
-                  onChange={(e) => setIsPublished(e.target.checked)}
-                  className="w-4 h-4 text-yellow-400 border-purple-500 rounded focus:ring-yellow-400 bg-transparent"
-                />
-                <label htmlFor="isPublished" className="text-sm font-medium text-gray-300">
-                  すぐに公開する
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  公開設定 <span className="text-red-400">*</span>
                 </label>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 即時公開 */}
+                  <label className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    publishMode === "immediate"
+                      ? "border-green-500/70 bg-green-500/10"
+                      : "border-gray-500/30 hover:border-gray-400/50"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="publishMode"
+                      value="immediate"
+                      checked={publishMode === "immediate"}
+                      onChange={() => setPublishMode("immediate")}
+                      className="accent-green-400"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-gray-200">即時公開</div>
+                      <div className="text-xs text-gray-400">保存後すぐに公開</div>
+                    </div>
+                  </label>
 
-              {!isPublished && (
-                <div className="amano-bg-glass border border-yellow-500/30 rounded-lg p-4">
-                  <p className="text-sm text-yellow-300">
-                    ⚠️ このお知らせは下書きとして保存され、公開されません。
-                  </p>
+                  {/* 予約投稿 */}
+                  <label className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    publishMode === "scheduled"
+                      ? "border-yellow-500/70 bg-yellow-500/10"
+                      : "border-gray-500/30 hover:border-gray-400/50"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="publishMode"
+                      value="scheduled"
+                      checked={publishMode === "scheduled"}
+                      onChange={() => setPublishMode("scheduled")}
+                      className="accent-yellow-400"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-gray-200">予約投稿</div>
+                      <div className="text-xs text-gray-400">指定日時に自動公開</div>
+                    </div>
+                  </label>
+
+                  {/* 下書き */}
+                  <label className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    publishMode === "draft"
+                      ? "border-gray-400/70 bg-gray-400/10"
+                      : "border-gray-500/30 hover:border-gray-400/50"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="publishMode"
+                      value="draft"
+                      checked={publishMode === "draft"}
+                      onChange={() => setPublishMode("draft")}
+                      className="accent-gray-400"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-gray-200">下書き</div>
+                      <div className="text-xs text-gray-400">非公開で保存</div>
+                    </div>
+                  </label>
                 </div>
-              )}
+
+                {/* 予約日時入力 */}
+                {publishMode === "scheduled" && (
+                  <div className="mt-4">
+                    <label htmlFor="scheduledDatetime" className="block text-sm font-medium text-gray-300 mb-2">
+                      公開日時 <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="scheduledDatetime"
+                      value={scheduledDatetime}
+                      onChange={(e) => setScheduledDatetime(e.target.value)}
+                      className="auth-input-field"
+                      required
+                    />
+                    <p className="text-xs text-yellow-300 mt-2">
+                      ⏰ 指定した日時になると自動的に公開されます。
+                    </p>
+                  </div>
+                )}
+
+                {publishMode === "draft" && (
+                  <div className="mt-3 amano-bg-glass border border-gray-500/30 rounded-lg p-3">
+                    <p className="text-sm text-gray-400">
+                      💾 下書きとして保存されます。公開されません。
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* アクションボタン */}

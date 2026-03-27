@@ -5,11 +5,17 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db
+    const now = Date.now();
+    const allNews = await ctx.db
       .query("news")
       .filter((q) => q.eq(q.field("isPublished"), true))
       .order("desc")
       .collect();
+
+    // 予約投稿日時が未来のものは除外
+    return allNews.filter(
+      (item) => !item.scheduledPublishDate || item.scheduledPublishDate <= now
+    );
   },
 });
 
@@ -17,11 +23,18 @@ export const getRecent = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit || 5;
-    return await ctx.db
+    const now = Date.now();
+    const allNews = await ctx.db
       .query("news")
       .filter((q) => q.eq(q.field("isPublished"), true))
       .order("desc")
-      .take(limit);
+      .collect();
+
+    return allNews
+      .filter(
+        (item) => !item.scheduledPublishDate || item.scheduledPublishDate <= now
+      )
+      .slice(0, limit);
   },
 });
 
@@ -30,6 +43,10 @@ export const getById = query({
   handler: async (ctx, args) => {
     const news = await ctx.db.get(args.id);
     if (!news || !news.isPublished) {
+      return null;
+    }
+    // 予約投稿日時が未来の場合は非公開扱い
+    if (news.scheduledPublishDate && news.scheduledPublishDate > Date.now()) {
       return null;
     }
     return news;
@@ -65,6 +82,7 @@ export const create = mutation({
     category: v.string(),
     publishDate: v.number(),
     isPublished: v.boolean(),
+    scheduledPublishDate: v.optional(v.number()),
     thumbnailUrl: v.optional(v.string()),
     thumbnailId: v.optional(v.id("_storage")),
   },
@@ -99,6 +117,7 @@ export const update = mutation({
     category: v.optional(v.string()),
     publishDate: v.optional(v.number()),
     isPublished: v.optional(v.boolean()),
+    scheduledPublishDate: v.optional(v.number()),
     thumbnailUrl: v.optional(v.string()),
     thumbnailId: v.optional(v.id("_storage")),
   },
