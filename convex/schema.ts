@@ -71,6 +71,7 @@ const applicationTables = {
     category: v.string(),
     publishDate: v.number(),
     isPublished: v.boolean(),
+    scheduledPublishDate: v.optional(v.number()), // 予約投稿日時（未来の場合は予約投稿）
     authorId: v.id("users"),
     // サムネイル画像の追加
     thumbnailUrl: v.optional(v.string()),

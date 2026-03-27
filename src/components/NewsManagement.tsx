@@ -11,7 +11,7 @@ export function NewsManagement() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<Doc<"news"> | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "published" | "draft">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "published" | "scheduled" | "draft">("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
   const handleEdit = (newsItem: any) => {
@@ -45,16 +45,23 @@ export function NewsManagement() {
 
   const categories = Array.from(new Set(news?.map(n => n.category) || []));
 
+  const now = Date.now();
+  const isScheduled = (item: any) =>
+    item.isPublished && item.scheduledPublishDate && item.scheduledPublishDate > now;
+
   const filteredNews = news?.filter(newsItem => {
     const matchesSearch = newsItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          newsItem.content.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filterStatus === "all" || 
-                         (filterStatus === "published" && newsItem.isPublished) ||
-                         (filterStatus === "draft" && !newsItem.isPublished);
-    
+
+    const scheduled = isScheduled(newsItem);
+    const matchesStatus =
+      filterStatus === "all" ||
+      (filterStatus === "published" && newsItem.isPublished && !scheduled) ||
+      (filterStatus === "scheduled" && scheduled) ||
+      (filterStatus === "draft" && !newsItem.isPublished);
+
     const matchesCategory = filterCategory === "all" || newsItem.category === filterCategory;
-    
+
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
@@ -106,6 +113,7 @@ export function NewsManagement() {
             >
               <option value="all">全てのステータス</option>
               <option value="published">公開済み</option>
+              <option value="scheduled">予約投稿</option>
               <option value="draft">下書き</option>
             </select>
           </div>
@@ -134,19 +142,31 @@ export function NewsManagement() {
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      newsItem.isPublished 
-                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white" 
-                        : "bg-gradient-to-r from-gray-500 to-gray-600 text-white"
-                    }`}>
-                      {newsItem.isPublished ? "公開済み" : "下書き"}
-                    </span>
+                    {isScheduled(newsItem) ? (
+                      <span className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                        ⏰ 予約投稿
+                      </span>
+                    ) : (
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        newsItem.isPublished
+                          ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
+                          : "bg-gradient-to-r from-gray-500 to-gray-600 text-white"
+                      }`}>
+                        {newsItem.isPublished ? "公開済み" : "下書き"}
+                      </span>
+                    )}
                     <span className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1 rounded-full text-xs font-medium">
                       {newsItem.category}
                     </span>
-                    <span className="text-gray-400 text-xs">
-                      📅 {new Date(newsItem.publishDate).toLocaleDateString('ja-JP')}
-                    </span>
+                    {isScheduled(newsItem) ? (
+                      <span className="text-yellow-300 text-xs">
+                        📅 {new Date(newsItem.scheduledPublishDate).toLocaleString('ja-JP')} 公開予定
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">
+                        📅 {new Date(newsItem.publishDate).toLocaleDateString('ja-JP')}
+                      </span>
+                    )}
                   </div>
                   
                   <h3 className="text-lg font-semibold text-gray-200 mb-2 line-clamp-2">

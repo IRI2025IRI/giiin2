@@ -18,7 +18,7 @@ npm run build:dev        # Build targeting dev Convex deployment
 npm run lint             # TypeScript type-check + build validation (no dedicated test runner)
 ```
 
-There is no separate test command — `npm run lint` runs `tsc -b && vite build` as validation.
+There is no separate test command — `npm run lint` runs `tsc -p convex`, `tsc -p .`, `convex dev --once`, and `vite build` as validation.
 
 ## Local Development Setup
 
@@ -58,6 +58,9 @@ Navigation is URL-hash-based, managed by `src/hooks/useUrlNavigation.ts`. The ma
 
 ### External content aggregation
 `convex/externalArticles.ts` and `convex/dataSync*.ts` scrape and sync content from external blogs/social sources using `cheerio` for HTML parsing.
+
+### Import aliases
+`@/*` maps to `./src/*` (configured in `tsconfig.json` and `vite.config.ts`). Use `@/components/...`, `@/hooks/...`, `@/lib/...` for internal imports.
 
 ### LINE browser compatibility
 `src/lib/utils.ts` contains LINE in-app browser detection and polyfills. Several UI behaviors differ in the LINE browser.
