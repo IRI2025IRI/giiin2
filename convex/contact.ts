@@ -2,6 +2,7 @@ import { mutation, query, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";
 import { internal } from "./_generated/api";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const submitContactForm = mutation({
   args: {
@@ -38,6 +39,21 @@ export const submitContactForm = mutation({
 export const getContactMessages = query({
   args: { status: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("認証が必要です");
+    }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     let query = ctx.db.query("contactMessages");
     if (args.status) {
       query = query.filter((q) => q.eq(q.field("status"), args.status));
@@ -53,6 +69,21 @@ export const updateContactStatus = mutation({
     response: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("認証が必要です");
+    }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     await ctx.db.patch(args.id, {
       status: args.status,
       response: args.response,

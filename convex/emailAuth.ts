@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { mutation, query, action, internalMutation, internalQuery, internalAction } from "./_generated/server";
+import { getAuthUserId, modifyAccountCredentials } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
 
 // メール認証トークンを検証
@@ -58,27 +58,28 @@ export const verifyEmailToken = mutation({
   },
 });
 
-// パスワードリセット
-export const resetPassword = mutation({
-  args: { 
+// パスワードリセット（実際にパスワードを変更する）
+export const resetPassword = action({
+  args: {
     token: v.string(),
     newPassword: v.string()
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ success: boolean; error?: string }> => {
     try {
-      // トークンを検索
-      const tokenRecord = await ctx.db
-        .query("emailVerificationTokens")
-        .withIndex("by_token", (q) => q.eq("token", args.token))
-        .filter((q) => q.eq(q.field("used"), false))
-        .filter((q) => q.eq(q.field("type"), "password_reset"))
-        .first();
+      // パスワードの長さをチェック
+      if (args.newPassword.length < 8) {
+        return { success: false, error: "パスワードは8文字以上で入力してください。" };
+      }
+
+      // トークンを検証
+      const tokenRecord = await ctx.runQuery(internal.emailAuth.getValidPasswordResetToken, {
+        token: args.token,
+      });
 
       if (!tokenRecord) {
         return { success: false, error: "無効なリセットトークンです。" };
       }
 
-      // トークンの有効期限をチェック
       if (tokenRecord.expiresAt < Date.now()) {
         return { success: false, error: "リセットトークンの有効期限が切れています。" };
       }
@@ -87,19 +88,72 @@ export const resetPassword = mutation({
         return { success: false, error: "ユーザーが見つかりません。" };
       }
 
-      // パスワードの長さをチェック
-      if (args.newPassword.length < 8) {
-        return { success: false, error: "パスワードは8文字以上で入力してください。" };
+      const user = await ctx.runQuery(internal.emailAuth.getUserRecordById, {
+        userId: tokenRecord.userId,
+      });
+
+      if (!user || !user.email) {
+        return { success: false, error: "ユーザーが見つかりません。" };
       }
 
+      // 実際にパスワード（認証情報）を更新
+      await modifyAccountCredentials(ctx, {
+        provider: "password",
+        account: { id: user.email, secret: args.newPassword },
+      });
+
       // トークンを使用済みにマーク
-      await ctx.db.patch(tokenRecord._id, { used: true });
+      await ctx.runMutation(internal.emailAuth.markTokenUsed, { tokenId: tokenRecord._id });
 
       return { success: true };
     } catch (error) {
       console.error("Password reset error:", error);
       return { success: false, error: "パスワードリセット処理中にエラーが発生しました。" };
     }
+  },
+});
+
+// 開発用: CLI経由でのみ実行可能なパスワード直接リセット（クライアントからは呼び出せない）
+export const adminSetPassword = internalAction({
+  args: { email: v.string(), newPassword: v.string() },
+  handler: async (ctx, args) => {
+    if (args.newPassword.length < 8) {
+      throw new Error("パスワードは8文字以上で入力してください。");
+    }
+
+    await modifyAccountCredentials(ctx, {
+      provider: "password",
+      account: { id: args.email, secret: args.newPassword },
+    });
+  },
+});
+
+// 内部関数: 有効なパスワードリセットトークンを検索（未使用のもののみ）
+export const getValidPasswordResetToken = internalQuery({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("emailVerificationTokens")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .filter((q) => q.eq(q.field("used"), false))
+      .filter((q) => q.eq(q.field("type"), "password_reset"))
+      .first();
+  },
+});
+
+// 内部関数: トークンを使用済みにマーク
+export const markTokenUsed = internalMutation({
+  args: { tokenId: v.id("emailVerificationTokens") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.tokenId, { used: true });
+  },
+});
+
+// 内部関数: ユーザーIDでユーザーを取得
+export const getUserRecordById = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
   },
 });
 

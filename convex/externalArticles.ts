@@ -1,7 +1,7 @@
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation, internalMutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 // 外部記事一覧を取得（最新順にソート）
 export const list = query({
@@ -641,7 +641,7 @@ export const fetchFromSource = action({
       let savedCount = 0;
       for (const article of newArticles.slice(0, 10)) { // 最大10件まで
         try {
-          await ctx.runMutation(api.externalArticles.saveArticleFromFeed, {
+          await ctx.runMutation(internal.externalArticles.saveArticleFromFeed, {
             sourceId: args.sourceId,
             councilMemberId: source.councilMemberId,
             title: article.title,
@@ -659,7 +659,7 @@ export const fetchFromSource = action({
       }
 
       // 最終取得時刻を更新
-      await ctx.runMutation(api.externalArticles.updateLastFetched, { sourceId: args.sourceId });
+      await ctx.runMutation(internal.externalArticles.updateLastFetched, { sourceId: args.sourceId });
 
       return {
         success: true,
@@ -701,8 +701,8 @@ export const getSourceById = query({
   },
 });
 
-// フィードから取得した記事を保存
-export const saveArticleFromFeed = mutation({
+// フィードから取得した記事を保存（fetchFromSource アクション内部からのみ呼び出す）
+export const saveArticleFromFeed = internalMutation({
   args: {
     sourceId: v.id("externalSources"),
     councilMemberId: v.id("councilMembers"),
@@ -763,8 +763,8 @@ export const saveArticleFromFeed = mutation({
   },
 });
 
-// 最終取得時刻を更新
-export const updateLastFetched = mutation({
+// 最終取得時刻を更新（fetchFromSource アクション内部からのみ呼び出す）
+export const updateLastFetched = internalMutation({
   args: { sourceId: v.id("externalSources") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.sourceId, {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -82,38 +82,46 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
     return content.substring(0, maxLength) + "...";
   };
 
-  // キーワードをハイライトする関数
-  const highlightKeywords = (text: string) => {
-    const keywords = [
-      // 質問側のキーワード
-      "質問側の内容", "質問内容", "質問者", "議員質問", "質問事項",
-      // 市側の回答キーワード
+  // キーワードをハイライトする関数（HTML注入ではなくReact要素として返す）
+  const highlightKeywords = (text: string): ReactNode[] => {
+    // 質問側のキーワード
+    const questionKeywords = ["質問側の内容", "質問内容", "質問者", "議員質問", "質問事項"];
+    // 市側の回答キーワード
+    const answerKeywords = [
       "市側の回答", "市からの回答", "回答内容", "市長答弁", "部長答弁", "課長答弁",
-       "市の見解", "市の方針", "市の対応",
-      // その他の重要キーワード
-      "再質問", "再答弁", "要望", "提案", "検討", "実施", "対策"
+      "市の見解", "市の方針", "市の対応",
     ];
+    // その他の重要キーワード
+    const otherKeywords = ["再質問", "再答弁", "要望", "提案", "検討", "実施", "対策"];
+    const allKeywords = [...questionKeywords, ...answerKeywords, ...otherKeywords];
 
-    let highlightedText = text;
-    
-    keywords.forEach(keyword => {
-      const regex = new RegExp(`(${keyword})`, 'gi');
-      highlightedText = highlightedText.replace(regex, (match) => {
-        // 質問側のキーワードは青系、回答側のキーワードは緑系でハイライト
-        const isQuestionKeyword = ["質問側の内容", "質問内容", "質問者", "議員質問", "質問事項"].includes(keyword);
-        const isAnswerKeyword = ["市側の回答", "市からの回答", "回答内容", "市長答弁", "部長答弁", "課長答弁", "答弁", "回答", "市の見解", "市の方針", "市の対応"].includes(keyword);
-        
-        if (isQuestionKeyword) {
-          return `<span class="inline-block px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">${match}</span>`;
-        } else if (isAnswerKeyword) {
-          return `<span class="inline-block px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">${match}</span>`;
-        } else {
-          return `<span class="inline-block px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">${match}</span>`;
-        }
-      });
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`(${allKeywords.map(escapeRegExp).join("|")})`, "g");
+
+    return text.split(pattern).map((part, i) => {
+      if (questionKeywords.includes(part)) {
+        return (
+          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">
+            {part}
+          </span>
+        );
+      }
+      if (answerKeywords.includes(part)) {
+        return (
+          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">
+            {part}
+          </span>
+        );
+      }
+      if (otherKeywords.includes(part)) {
+        return (
+          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">
+            {part}
+          </span>
+        );
+      }
+      return part;
     });
-
-    return highlightedText;
   };
 
   return (
@@ -169,12 +177,9 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
 
       {/* Content */}
       <div className="mb-4">
-        <div 
-          className="text-gray-300 leading-relaxed whitespace-pre-wrap"
-          dangerouslySetInnerHTML={{
-            __html: highlightKeywords(isExpanded ? question.content : truncateContent(question.content))
-          }}
-        />
+        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+          {highlightKeywords(isExpanded ? question.content : truncateContent(question.content))}
+        </div>
         {question.content.length > 200 && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -240,12 +245,9 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
                   </span>
                 </div>
                 
-                <div 
-                  className="text-gray-300 leading-relaxed mb-3 whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightKeywords(response.content)
-                  }}
-                />
+                <div className="text-gray-300 leading-relaxed mb-3 whitespace-pre-wrap">
+                  {highlightKeywords(response.content)}
+                </div>
                 
                 {response.documentUrl && (
                   <a

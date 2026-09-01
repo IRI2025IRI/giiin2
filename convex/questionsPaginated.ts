@@ -10,8 +10,10 @@ export const listPaginated = query({
     memberId: v.optional(v.id("councilMembers")),
     searchTerm: v.optional(v.string()),
     sessionNumber: v.optional(v.string()),
+    sortBy: v.optional(v.union(v.literal("newest"), v.literal("oldest"))),
   },
   handler: async (ctx, args) => {
+    const order = args.sortBy === "oldest" ? "asc" : "desc";
     let queryBuilder;
     
     // 最も効率的なインデックスを選択（優先順位: 会議番号 > 議員 > カテゴリー）
@@ -40,7 +42,7 @@ export const listPaginated = query({
     }
     
     // ページネーション適用
-    const result = await queryBuilder.order("desc").paginate(args.paginationOpts);
+    const result = await queryBuilder.order(order).paginate(args.paginationOpts);
     
     // 追加フィルタリング（インデックスで使用されなかった条件を適用）
     let filteredQuestions = result.page;

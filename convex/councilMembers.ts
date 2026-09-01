@@ -2,10 +2,24 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
-// データベースの状況を確認するためのクエリ
+// データベースの状況を確認するためのクエリ（管理者用デバッグ）
 export const checkDataStatus = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("認証が必要です");
+    }
+
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     const memberCount = await ctx.db.query("councilMembers").collect();
     const questionCount = await ctx.db.query("questions").collect();
     const userCount = await ctx.db.query("users").collect();
@@ -98,6 +112,16 @@ export const create = mutation({
       throw new Error("認証が必要です");
     }
 
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     return await ctx.db.insert("councilMembers", args);
   },
 });
@@ -135,6 +159,16 @@ export const update = mutation({
       throw new Error("認証が必要です");
     }
 
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     const { id, ...updateData } = args;
     await ctx.db.patch(id, updateData);
   },
@@ -146,6 +180,16 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new Error("認証が必要です");
+    }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
     }
 
     await ctx.db.delete(args.id);
@@ -354,6 +398,17 @@ export const generateUploadUrl = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     return await ctx.storage.generateUploadUrl();
   },
 });

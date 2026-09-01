@@ -11,6 +11,7 @@ export const list = query({
     councilMemberId: v.optional(v.id("councilMembers")), // 後方互換性のため
     searchTerm: v.optional(v.string()),
     status: v.optional(v.string()),
+    sessionNumber: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let questions;
@@ -43,7 +44,11 @@ export const list = query({
     if (args.status) {
       filteredQuestions = filteredQuestions.filter(q => q.status === args.status);
     }
-    
+
+    if (args.sessionNumber) {
+      filteredQuestions = filteredQuestions.filter(q => q.sessionNumber === args.sessionNumber);
+    }
+
     if (args.searchTerm) {
       const searchLower = args.searchTerm.toLowerCase();
       filteredQuestions = filteredQuestions.filter(q => {
@@ -58,10 +63,10 @@ export const list = query({
     if (args.limit) {
       filteredQuestions = filteredQuestions.slice(0, args.limit);
     }
-    
+
     // 議員情報を取得
     const questionsWithMembers = await Promise.all(
-      questions.map(async (question) => {
+      filteredQuestions.map(async (question) => {
         const member = await ctx.db.get(question.councilMemberId);
         const responses = await ctx.db
           .query("responses")
@@ -202,7 +207,17 @@ export const create = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
-    
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     return await ctx.db.insert("questions", {
       ...args,
       status: "pending" as const,
@@ -227,9 +242,19 @@ export const update = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
-    
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     const { questionId, ...updates } = args;
-    
+
     // 空の値を除去
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, value]) => value !== undefined)
@@ -250,7 +275,17 @@ export const remove = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
-    
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     // 関連する回答も削除
     const responses = await ctx.db
       .query("responses")
@@ -317,7 +352,17 @@ export const deleteQuestion = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
-    
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     // 関連する回答も削除
     const responses = await ctx.db
       .query("responses")
@@ -407,7 +452,17 @@ export const addResponse = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
-    
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     return await ctx.db.insert("responses", args);
   },
 });
@@ -426,7 +481,17 @@ export const updateResponse = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
-    
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     const { responseId, ...updates } = args;
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([_, value]) => value !== undefined)
@@ -447,7 +512,17 @@ export const deleteResponse = mutation({
     if (!userId) {
       throw new Error("認証が必要です");
     }
-    
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     return await ctx.db.delete(args.responseId);
   },
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
@@ -48,28 +48,49 @@ function usePerformanceMode() {
 
 // ローディングコンポーネント（削除）
 
+// ヘルパー関数：1行のテキスト中の特定フレーズだけをReact要素に置き換える（HTML注入なし）
+function highlightPhrase(nodes: ReactNode[], phrase: string, className: string): ReactNode[] {
+  const result: ReactNode[] = [];
+  nodes.forEach((node) => {
+    if (typeof node !== 'string') {
+      result.push(node);
+      return;
+    }
+    const segments = node.split(phrase);
+    segments.forEach((segment, i) => {
+      if (i > 0) {
+        result.push(
+          <span key={`${phrase}-${result.length}`} className={className}>{phrase}</span>
+        );
+      }
+      if (segment) result.push(segment);
+    });
+  });
+  return result;
+}
+
 // ヘルパー関数：回答内容のキーワードを装飾
 function formatResponseContent(content: string) {
   return content.split('\n').map((line, lineIndex) => {
-    let formattedLine = line;
-    
-    // 「質問側の内容」を装飾
+    let parts: ReactNode[] = [line];
+
     if (line.includes('質問側の内容')) {
-      formattedLine = line.replace(
-        /質問側の内容/g,
-        '<span class="bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-2 py-1 rounded font-bold amano-text-glow">質問側の内容</span>'
+      parts = highlightPhrase(
+        parts,
+        '質問側の内容',
+        'bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-2 py-1 rounded font-bold amano-text-glow'
       );
     }
-    
-    // 「市側の回答」を装飾
+
     if (line.includes('市側の回答')) {
-      formattedLine = formattedLine.replace(
-        /市側の回答/g,
-        '<span class="bg-gradient-to-r from-cyan-400 to-blue-400 text-black px-2 py-1 rounded font-bold amano-text-glow">市側の回答</span>'
+      parts = highlightPhrase(
+        parts,
+        '市側の回答',
+        'bg-gradient-to-r from-cyan-400 to-blue-400 text-black px-2 py-1 rounded font-bold amano-text-glow'
       );
     }
-    
-    return <div key={lineIndex} className="mb-1" dangerouslySetInnerHTML={{ __html: formattedLine }} />;
+
+    return <div key={lineIndex} className="mb-1">{parts}</div>;
   });
 }
 
@@ -118,6 +139,17 @@ function AppContent() {
       setShowLoginModal(false);
     }
   }, [isAdmin]);
+
+  // 管理者権限がないユーザーが ?view=admin などURL直打ちで管理画面に遷移した場合の対策
+  useEffect(() => {
+    if (currentView === "admin" && isAdmin === false) {
+      setCurrentView("dashboard");
+      setShowLoginModal(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("view");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [currentView, isAdmin]);
 
   // URL navigation hook
   useUrlNavigation({
@@ -322,7 +354,8 @@ function AppContent() {
             case "contact":
               return <Contact />;
             case "admin":
-              return <AdminPanel />;
+              // isAdmin が確定して true の場合のみ管理画面を描画する（URL直打ちでのバイパス対策）
+              return isAdmin === true ? <AdminPanel /> : null;
             case "terms":
               return <TermsAndPrivacy />;
             default:

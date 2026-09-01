@@ -1,5 +1,6 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // FAQのサンプルデータを作成する関数
 export const createSampleFAQs = mutation({
@@ -186,6 +187,21 @@ export const createSampleFAQs = mutation({
 export const deleteSampleFAQs = mutation({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("認証が必要です");
+    }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     const faqs = await ctx.db.query("faqItems").collect();
     
     for (const faq of faqs) {

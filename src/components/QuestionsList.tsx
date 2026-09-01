@@ -22,16 +22,36 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
   const [activeMember, setActiveMember] = useState<Id<"councilMembers"> | null>(null);
   const [activeSessionNumber, setActiveSessionNumber] = useState("all");
 
-  // ページネーション対応のクエリ
+  // タイトル順は日付インデックスでのページネーションができないため、
+  // 該当件数を一括取得してクライアント側で並び替える
+  const isTitleSort = sortBy === "title";
+
+  // ページネーション対応のクエリ（新しい順・古い順はサーバー側で並び替え）
   const { results, status, loadMore } = usePaginatedQuery(
     api.questionsPaginated.listPaginated,
-    {
-      category: activeCategory === "all" ? undefined : activeCategory,
-      memberId: activeMember || undefined,
-      searchTerm: activeSearchQuery || undefined,
-      sessionNumber: activeSessionNumber === "all" ? undefined : activeSessionNumber,
-    },
+    isTitleSort
+      ? "skip"
+      : {
+          category: activeCategory === "all" ? undefined : activeCategory,
+          memberId: activeMember || undefined,
+          searchTerm: activeSearchQuery || undefined,
+          sessionNumber: activeSessionNumber === "all" ? undefined : activeSessionNumber,
+          sortBy: sortBy === "oldest" ? "oldest" : "newest",
+        },
     { initialNumItems: 20 }
+  );
+
+  // タイトル順表示用：条件に合致する全件を取得
+  const titleSortedQuestions = useQuery(
+    api.questions.list,
+    isTitleSort
+      ? {
+          category: activeCategory === "all" ? undefined : activeCategory,
+          memberId: activeMember || undefined,
+          searchTerm: activeSearchQuery || undefined,
+          sessionNumber: activeSessionNumber === "all" ? undefined : activeSessionNumber,
+        }
+      : "skip"
   );
 
   const councilMembers = useQuery(api.councilMembers.list, { activeOnly: true });
@@ -58,7 +78,11 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     setActiveSessionNumber("all");
   };
 
-  if (status === "LoadingFirstPage") {
+  const isLoadingQuestions = isTitleSort
+    ? titleSortedQuestions === undefined
+    : status === "LoadingFirstPage";
+
+  if (isLoadingQuestions) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -69,22 +93,11 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     );
   }
 
-  // カテゴリー一覧はデータベースから取得済み
-
-  // 質問をソートのみ（フィルタリングはサーバーサイドで実行済み）
-  const filteredQuestions = results
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return b.sessionDate - a.sessionDate;
-        case "oldest":
-          return a.sessionDate - b.sessionDate;
-        case "title":
-          return a.title.localeCompare(b.title, 'ja');
-        default:
-          return 0;
-      }
-    });
+  // フィルタリング・並び替えはサーバーサイドで実行済み。
+  // タイトル順のみ、日付インデックスでページネーションできないため全件取得後にクライアント側で並び替える。
+  const filteredQuestions = isTitleSort
+    ? [...(titleSortedQuestions ?? [])].sort((a, b) => a.title.localeCompare(b.title, 'ja'))
+    : results;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -251,8 +264,8 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
               />
             ))}
             
-            {/* もっと読み込むボタン */}
-            {status === "CanLoadMore" && (
+            {/* もっと読み込むボタン（タイトル順は全件取得済みのため対象外） */}
+            {!isTitleSort && status === "CanLoadMore" && (
               <div className="text-center pt-6">
                 <button
                   onClick={() => loadMore(20)}
@@ -262,8 +275,8 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
                 </button>
               </div>
             )}
-            
-            {status === "LoadingMore" && (
+
+            {!isTitleSort && status === "LoadingMore" && (
               <div className="text-center py-4">
                 <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
               </div>

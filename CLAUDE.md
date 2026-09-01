@@ -51,16 +51,22 @@ Navigation is URL-hash-based, managed by `src/hooks/useUrlNavigation.ts`. The ma
 `src/App.tsx` detects device hardware (CPU cores, memory) at startup and sets a performance tier (high/medium/low) that controls animation, blur effects, and rendering complexity.
 
 ### Key data domains (Convex tables in `convex/schema.ts`)
-- `questions` — council Q&A, indexed by member, session date, category
-- `councilMembers` — member profiles with contact info
+- `questions` / `responses` — council Q&A, indexed by member, session date, category
+- `councilMembers` — member profiles with contact, party, committee info
 - `news` — news articles with thumbnails
-- `faq`, `contact`, `likes`, `userDemographics`, `slideshow`, `menuSettings`, `externalArticles`
+- `faqItems`, `contactMessages`, `userDemographics`, `slideshowSlides`, `menuSettings`
+- `externalArticles` / `externalSources` — scraped blog/social content (blog, facebook, twitter, instagram, rss)
+- `adminUsers` — role-based access (admin / superAdmin)
+- `emailVerificationTokens` / `userEmailStatus` — token-based email verification and password reset flow
 
 ### External content aggregation
 `convex/externalArticles.ts` and `convex/dataSync*.ts` scrape and sync content from external blogs/social sources using `cheerio` for HTML parsing.
 
 ### Import aliases
 `@/*` maps to `./src/*` (configured in `tsconfig.json` and `vite.config.ts`). Use `@/components/...`, `@/hooks/...`, `@/lib/...` for internal imports.
+
+### File storage
+Images are stored via Convex Storage. The HTTP endpoint `/api/storage/{storageId}` (defined in `convex/router.ts`) returns a 302 redirect to a signed URL.
 
 ### LINE browser compatibility
 `src/lib/utils.ts` contains LINE in-app browser detection and polyfills. Several UI behaviors differ in the LINE browser.
