@@ -154,7 +154,7 @@ ${args.message}
     try {
       const { data, error } = await resend.emails.send({
         from: "GIIIN/ギイーン お問い合わせ <noreply@giiin.info>",
-        to: "info@giiin.info",
+        to: ["info@giiin.info", "daiki.izumi@gmail.com"],
         subject: emailSubject,
         text: emailContent,
       });
