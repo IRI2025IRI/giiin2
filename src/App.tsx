@@ -6,8 +6,9 @@ import { Authenticated, Unauthenticated } from "convex/react";
 import { SignOutButton } from "./SignOutButton";
 import { ScrollToTopButton } from "./components/ScrollToTopButton";
 import { LoginModal } from "./components/LoginModal";
+import { InfoTooltip } from "./components/InfoTooltip";
 import { useUrlNavigation } from "./hooks/useUrlNavigation";
-import { isLINEBrowser, safeScrollTo } from "./lib/utils";
+import { isLINEBrowser, safeScrollTo, getYouTubeEmbedUrl } from "./lib/utils";
 
 // コンポーネントを通常のimportで読み込み（パフォーマンス最適化済み）
 import { Dashboard } from "./components/Dashboard";
@@ -618,15 +619,28 @@ function QuestionDetail({
         {question.youtubeUrl && (
           <div className="mt-6">
             <h3 className="text-lg font-bold text-yellow-400 mb-3">📹 動画</h3>
-            <a
-              href={question.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 text-cyan-400 hover:text-yellow-400 transition-colors"
-            >
-              <span>YouTube で見る</span>
-              <span>↗</span>
-            </a>
+            {getYouTubeEmbedUrl(question.youtubeUrl) ? (
+              <div className="relative w-full rounded-lg overflow-hidden amano-crystal-border" style={{ paddingTop: "56.25%" }}>
+                <iframe
+                  src={getYouTubeEmbedUrl(question.youtubeUrl)!}
+                  title="質問に関する動画"
+                  className="absolute inset-0 w-full h-full"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : (
+              <a
+                href={question.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 text-cyan-400 hover:text-yellow-400 transition-colors"
+              >
+                <span>YouTube で見る</span>
+                <span>↗</span>
+              </a>
+            )}
           </div>
         )}
       </div>
@@ -634,8 +648,9 @@ function QuestionDetail({
       {/* 回答一覧 */}
       {responses && responses.length > 0 && (
         <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-          <h2 className="text-xl font-bold text-yellow-400 mb-6 amano-text-glow">
+          <h2 className="text-xl font-bold text-yellow-400 mb-6 amano-text-glow flex items-center">
             💬 AI要約回答 ({responses.length}件)
+            <InfoTooltip text="議員からの質問（質問側の内容）と、それに対する市の担当部署からの回答（市側の回答）をAIが要約して表示しています。" />
           </h2>
           <div className="space-y-6">
             {responses.map((response, index) => (

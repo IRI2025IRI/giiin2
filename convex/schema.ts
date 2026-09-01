@@ -39,11 +39,17 @@ const applicationTables = {
     youtubeUrl: v.optional(v.string()),
     documentUrl: v.optional(v.string()),
     status: v.union(v.literal("pending"), v.literal("answered"), v.literal("archived")),
+    // title + content を結合した全文検索用フィールド（create/update時に自動生成、既存データは移行で補完）
+    searchText: v.optional(v.string()),
   })
     .index("by_council_member", ["councilMemberId"])
     .index("by_session_date", ["sessionDate"])
     .index("by_session_number", ["sessionNumber"])
-    .index("by_category", ["category"]),
+    .index("by_category", ["category"])
+    .searchIndex("search_content", {
+      searchField: "searchText",
+      filterFields: ["category", "councilMemberId", "sessionNumber", "status"],
+    }),
 
   responses: defineTable({
     questionId: v.id("questions"),

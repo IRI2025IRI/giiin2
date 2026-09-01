@@ -3,6 +3,7 @@ import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { QuestionCard } from "./QuestionCard";
+import { InfoTooltip } from "./InfoTooltip";
 
 interface QuestionsListProps {
   onQuestionClick: (questionId: Id<"questions">) => void;
@@ -184,8 +185,9 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
 
               {/* 会議番号 */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
                   会議番号
+                  <InfoTooltip text="質問が行われた市議会の会期（定例会・臨時会）を表します。「令和6年第3回定例会」のように表記されます。" />
                 </label>
                 <select
                   value={selectedSessionNumber}

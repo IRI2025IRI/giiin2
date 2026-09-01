@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
@@ -14,51 +14,63 @@ export const list = query({
     sessionNumber: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let questions;
-    
     const targetMemberId = args.memberId || args.councilMemberId;
-    
-    if (targetMemberId) {
-      questions = await ctx.db
+    let filteredQuestions;
+
+    if (args.searchTerm) {
+      // 自由文検索は全文検索インデックスを使用（表記ゆれに強く、関連度順に返る）
+      filteredQuestions = await ctx.db
         .query("questions")
-        .withIndex("by_council_member", (q) => 
+        .withSearchIndex("search_content", (q) => {
+          let searchQuery = q.search("searchText", args.searchTerm!);
+          if (args.category) searchQuery = searchQuery.eq("category", args.category);
+          if (targetMemberId) searchQuery = searchQuery.eq("councilMemberId", targetMemberId);
+          if (args.sessionNumber) searchQuery = searchQuery.eq("sessionNumber", args.sessionNumber);
+          if (args.status) {
+            searchQuery = searchQuery.eq(
+              "status",
+              args.status as "pending" | "answered" | "archived"
+            );
+          }
+          return searchQuery;
+        })
+        .collect();
+    } else if (targetMemberId) {
+      filteredQuestions = await ctx.db
+        .query("questions")
+        .withIndex("by_council_member", (q) =>
           q.eq("councilMemberId", targetMemberId)
         )
         .order("desc")
         .collect();
+
+      if (args.category) {
+        filteredQuestions = filteredQuestions.filter(q => q.category === args.category);
+      }
+      if (args.status) {
+        filteredQuestions = filteredQuestions.filter(q => q.status === args.status);
+      }
+      if (args.sessionNumber) {
+        filteredQuestions = filteredQuestions.filter(q => q.sessionNumber === args.sessionNumber);
+      }
     } else {
-      questions = await ctx.db
+      filteredQuestions = await ctx.db
         .query("questions")
         .withIndex("by_session_date")
         .order("desc")
         .collect();
-    }
-    
-    // フィルタリング（データベースから取得した全データに対して）
-    let filteredQuestions = questions;
-    
-    if (args.category) {
-      filteredQuestions = filteredQuestions.filter(q => q.category === args.category);
-    }
-    
-    if (args.status) {
-      filteredQuestions = filteredQuestions.filter(q => q.status === args.status);
+
+      if (args.category) {
+        filteredQuestions = filteredQuestions.filter(q => q.category === args.category);
+      }
+      if (args.status) {
+        filteredQuestions = filteredQuestions.filter(q => q.status === args.status);
+      }
+      if (args.sessionNumber) {
+        filteredQuestions = filteredQuestions.filter(q => q.sessionNumber === args.sessionNumber);
+      }
     }
 
-    if (args.sessionNumber) {
-      filteredQuestions = filteredQuestions.filter(q => q.sessionNumber === args.sessionNumber);
-    }
-
-    if (args.searchTerm) {
-      const searchLower = args.searchTerm.toLowerCase();
-      filteredQuestions = filteredQuestions.filter(q => {
-        // タイトル、内容での検索
-        const titleMatch = q.title.toLowerCase().includes(searchLower);
-        const contentMatch = q.content.toLowerCase().includes(searchLower);
-        return titleMatch || contentMatch;
-      });
-    }
-    
     // 制限
     if (args.limit) {
       filteredQuestions = filteredQuestions.slice(0, args.limit);
@@ -221,6 +233,7 @@ export const create = mutation({
     return await ctx.db.insert("questions", {
       ...args,
       status: "pending" as const,
+      searchText: `${args.title} ${args.content}`,
     });
   },
 });
@@ -256,14 +269,25 @@ export const update = mutation({
     const { questionId, ...updates } = args;
 
     // 空の値を除去
-    const filteredUpdates = Object.fromEntries(
+    const filteredUpdates: Record<string, unknown> = Object.fromEntries(
       Object.entries(updates).filter(([_, value]) => value !== undefined)
     );
-    
+
     if (Object.keys(filteredUpdates).length === 0) {
       throw new Error("更新する項目がありません");
     }
-    
+
+    // title/contentが更新される場合は全文検索用フィールドを再生成
+    if (filteredUpdates.title !== undefined || filteredUpdates.content !== undefined) {
+      const existing = await ctx.db.get(questionId);
+      if (!existing) {
+        throw new Error("質問が見つかりません");
+      }
+      const title = (filteredUpdates.title as string | undefined) ?? existing.title;
+      const content = (filteredUpdates.content as string | undefined) ?? existing.content;
+      filteredUpdates.searchText = `${title} ${content}`;
+    }
+
     return await ctx.db.patch(questionId, filteredUpdates);
   },
 });
@@ -524,5 +548,23 @@ export const deleteResponse = mutation({
     }
 
     return await ctx.db.delete(args.responseId);
+  },
+});
+
+// 内部関数: 既存データのsearchText（全文検索用フィールド）を補完する一括移行（CLIから実行）
+export const backfillSearchText = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const questions = await ctx.db.query("questions").collect();
+    let updated = 0;
+    for (const question of questions) {
+      if (question.searchText === undefined) {
+        await ctx.db.patch(question._id, {
+          searchText: `${question.title} ${question.content}`,
+        });
+        updated++;
+      }
+    }
+    return { updated, total: questions.length };
   },
 });

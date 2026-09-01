@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { InfoTooltip } from "./InfoTooltip";
 
 interface QuestionCardProps {
   question: {
@@ -221,8 +222,9 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
       {/* Responses Section */}
       {question.responses && question.responses.length > 0 && (
         <div className="mt-6 pt-6 border-t border-purple-500">
-          <h4 className="text-lg font-bold text-yellow-400 mb-4 amano-text-glow">
+          <h4 className="text-lg font-bold text-yellow-400 mb-4 amano-text-glow flex items-center">
             💬 AI要約 ({question.responses.length}件)
+            <InfoTooltip text="議員からの質問（質問側の内容）と、それに対する市の担当部署からの回答（市側の回答）をAIが要約して表示しています。" />
           </h4>
           <div className="space-y-4">
             {question.responses.map((response) => (
