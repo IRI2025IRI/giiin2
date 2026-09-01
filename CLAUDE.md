@@ -73,4 +73,4 @@ Images are stored via Convex Storage. The HTTP endpoint `/api/storage/{storageId
 
 ## Environments
 - Dev Convex deployment: `outgoing-owl-339.convex.cloud`
-- Prod Convex deployment: `shiny-pony-367.convex.cloud`
+- Prod Convex deployment: `hidden-mouse-968.convex.cloud`

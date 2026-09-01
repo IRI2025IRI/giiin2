@@ -3,22 +3,25 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { execFileSync } from "node:child_process";
 import { config as loadDotenv } from "dotenv";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "../convex/_generated/api.js";
 
 // build:prod/build:devが明示的に設定した値を優先しつつ、素のbuildコマンド実行時は.env.localを補完的に読み込む
 loadDotenv({ path: ".env.local" });
 
 const SITE_URL = "https://giiin.info";
 
-const convexUrl = process.env.VITE_CONVEX_URL;
-if (!convexUrl) {
-  console.warn("[sitemap] VITE_CONVEX_URLが未設定のため、sitemap.xmlの生成をスキップします。");
-  process.exit(0);
+// ConvexHttpClient経由の匿名クエリは一部デプロイでServer Errorになることが確認できたため、
+// 認証済みのConvex CLI（npx convex run）経由でデータを取得する
+function runConvexQuery(functionName, args = {}) {
+  const isWindows = process.platform === "win32";
+  const cmd = isWindows ? "cmd" : "npx";
+  const cmdArgs = isWindows
+    ? ["/c", "npx", "convex", "run", functionName, JSON.stringify(args)]
+    : ["convex", "run", functionName, JSON.stringify(args)];
+  const output = execFileSync(cmd, cmdArgs, { encoding: "utf-8" });
+  return JSON.parse(output);
 }
-
-const client = new ConvexHttpClient(convexUrl);
 
 function escapeXml(value) {
   return value.replace(/[<>&'"]/g, (char) => {
@@ -48,7 +51,7 @@ async function main() {
   ];
 
   try {
-    const members = await client.query(api.councilMembers.list, {});
+    const members = runConvexQuery("councilMembers:list", {});
     for (const member of members) {
       entries.push(
         urlEntry(`${SITE_URL}/?view=memberDetail&member=${member._id}`, {
