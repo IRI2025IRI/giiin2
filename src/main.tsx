@@ -1,11 +1,10 @@
-// Polyfills for LINE browser compatibility
-import "core-js/stable";
 import { createRoot } from "react-dom/client";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { Toaster } from "sonner";
 import "./index.css";
 import App from "./App";
+import { isLINEBrowser } from "./lib/utils";
 
 // Global error handler for LINE browser
 window.addEventListener('error', (event) => {
@@ -23,13 +22,22 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-try {
-  createRoot(rootElement).render(
-    <ConvexAuthProvider client={convex}>
-      <App />
-      <Toaster position="bottom-right" richColors />
-    </ConvexAuthProvider>,
-  );
-} catch (error) {
-  console.error('Failed to render app:', error);
+async function bootstrap() {
+  // LINEアプリ内ブラウザなど古いWebViewのみポリフィルを読み込む（他のユーザーの初期バンドルを軽量化）
+  if (isLINEBrowser()) {
+    await import("core-js/stable");
+  }
+
+  try {
+    createRoot(rootElement!).render(
+      <ConvexAuthProvider client={convex}>
+        <App />
+        <Toaster position="bottom-right" richColors />
+      </ConvexAuthProvider>,
+    );
+  } catch (error) {
+    console.error('Failed to render app:', error);
+  }
 }
+
+bootstrap();

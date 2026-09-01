@@ -97,7 +97,7 @@ export function ExternalArticles({ onArticleClick }: ExternalArticlesProps) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4 animate-amano-glow"></div>
+          <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-300 amano-text-glow">記事を読み込み中...</p>
         </div>
       </div>

@@ -69,22 +69,12 @@
   /* 中性能デバイス用 - 軽量化 */
 }
 
-.performance-medium .amano-bg-glass,
-.performance-low .amano-bg-glass {
-  background: rgba(248, 250, 252, 0.03);
-  backdrop-filter: none; /* blur を無効化 */
-  border: 1px solid rgba(248, 250, 252, 0.08);
-}
-
 .performance-low {
   /* 低性能デバイス用 - 最軽量 */
 }
 
-.performance-low .amano-bg-card {
-  background: rgba(76, 29, 149, 0.1);
-  backdrop-filter: none;
-  border: 1px solid rgba(248, 250, 252, 0.1);
-}
+/* .amano-bg-card / .amano-bg-glass は既定でbackdrop-filterを使わないため、
+   パフォーマンスモード別の上書きは不要になった（サイドバーのみ残す） */
 
 .performance-low .amano-bg-sidebar {
   background: rgba(15, 12, 41, 0.95);
@@ -203,19 +193,15 @@
   box-shadow: 4px 0 20px rgba(76, 29, 149, 0.3);
 }
 
+/* カード類は数が多く画面全体に敷き詰められるため、backdrop-filterは使わず軽量な半透明背景のみにする。
+   ぼかし演出はサイドバーなど目立つ箇所（.amano-bg-sidebar）に限定する。 */
 .amano-bg-card {
-  background: linear-gradient(135deg, 
-    rgba(248, 250, 252, 0.05) 0%, 
-    rgba(76, 29, 149, 0.1) 25%, 
-    rgba(30, 58, 138, 0.08) 75%, 
-    rgba(8, 145, 178, 0.05) 100%);
-  backdrop-filter: blur(10px);
+  background: rgba(76, 29, 149, 0.1);
   border: 1px solid rgba(248, 250, 252, 0.1);
 }
 
 .amano-bg-glass {
   background: rgba(248, 250, 252, 0.03);
-  backdrop-filter: blur(20px);
   border: 1px solid rgba(248, 250, 252, 0.08);
 }
 

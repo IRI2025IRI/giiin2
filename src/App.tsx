@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
@@ -19,10 +19,13 @@ import { News } from "./components/News";
 import { NewsDetail } from "./components/NewsDetail";
 import { Contact } from "./components/Contact";
 import { FAQ } from "./components/FAQ";
-import { AdminPanel } from "./components/AdminPanel";
 import { TermsAndPrivacy } from "./components/TermsAndPrivacy";
 import { ExternalArticles } from "./components/ExternalArticles";
 import { ExternalArticleDetail } from "./components/ExternalArticleDetail";
+
+// 管理画面は一般利用者の大半が開かないため、初期バンドルから分離して遅延読み込みする
+// （TermsAndPrivacyはLoginModal側でも使われておりバンドル分離の効果がないため対象外）
+const AdminPanel = lazy(() => import("./components/AdminPanel").then((m) => ({ default: m.AdminPanel })));
 
 // パフォーマンス最適化フック
 function usePerformanceMode() {
@@ -504,7 +507,15 @@ function AppContent() {
 
         {/* コンテンツエリア */}
         <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-          {renderContent()}
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            }
+          >
+            {renderContent()}
+          </Suspense>
         </main>
       </div>
 

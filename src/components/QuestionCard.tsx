@@ -101,21 +101,21 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
     return text.split(pattern).map((part, i) => {
       if (questionKeywords.includes(part)) {
         return (
-          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">
+          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-xs font-bold shadow-lg">
             {part}
           </span>
         );
       }
       if (answerKeywords.includes(part)) {
         return (
-          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">
+          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-bold shadow-lg">
             {part}
           </span>
         );
       }
       if (otherKeywords.includes(part)) {
         return (
-          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold shadow-lg animate-pulse">
+          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold shadow-lg">
             {part}
           </span>
         );
@@ -274,7 +274,7 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
             disabled={isLiking}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 amano-crystal-border ${
               question.isLiked
-                ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white animate-amano-glow"
+                ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
                 : "bg-gradient-to-r from-gray-600 to-gray-700 text-gray-300 hover:from-orange-500 hover:to-yellow-500 hover:text-white"
             }`}
           >
@@ -291,7 +291,7 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
         {onClick && (
           <button
             onClick={onClick}
-            className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border animate-amano-glow"
+            className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border"
           >
             詳細を見る →
           </button>

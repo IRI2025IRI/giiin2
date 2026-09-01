@@ -132,7 +132,7 @@ export function FAQManagement() {
   if (faqs === undefined) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin animate-amano-glow"></div>
+        <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -146,7 +146,7 @@ export function FAQManagement() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setIsFormOpen(true)}
-            className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border animate-amano-glow text-sm"
+            className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border text-sm"
           >
             新規FAQ作成
           </button>
@@ -285,7 +285,7 @@ export function FAQManagement() {
             </p>
             <button
               onClick={handleCreateSampleData}
-              className="bg-gradient-to-r from-green-600 to-emerald-500 text-white px-6 py-3 rounded-lg font-medium hover:from-green-500 hover:to-emerald-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border animate-amano-glow"
+              className="bg-gradient-to-r from-green-600 to-emerald-500 text-white px-6 py-3 rounded-lg font-medium hover:from-green-500 hover:to-emerald-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border"
             >
               サンプルデータを作成
             </button>

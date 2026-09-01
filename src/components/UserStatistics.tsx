@@ -8,7 +8,7 @@ export function UserStatistics() {
     return (
       <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
         <div className="flex items-center space-x-2 mb-4">
-          <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin animate-amano-glow"></div>
+          <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
           <span className="text-gray-300">統計情報を読み込み中...</span>
         </div>
       </div>
