@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { QuestionCard } from "./QuestionCard";
+import { useDocumentMeta } from "../hooks/useDocumentMeta";
 
 interface CouncilMemberDetailProps {
   memberId: Id<"councilMembers">;
@@ -16,6 +17,31 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
   const member = useQuery(api.councilMembers.get, { id: memberId });
   const memberStats = useQuery(api.councilMembers.getStats, { memberId });
   const memberQuestions = useQuery(api.questions.list, { councilMemberId: memberId });
+
+  useDocumentMeta({
+    title: member
+      ? `${member.name}${member.position ? `（${member.position}）` : ""} - 三原市議会議員 | GIIIN/ギイーン`
+      : "GIIIN/ギイーン - 議員活動を身近に。【広島県三原市】",
+    description: member
+      ? `${member.name}議員（${[member.party, member.position].filter(Boolean).join(" / ") || "三原市議会議員"}）の質問・回答・活動実績をGIIIN/ギイーンで見る。`
+      : undefined,
+    canonicalUrl: member ? `https://giiin.info/?view=memberDetail&member=${member._id}` : undefined,
+    structuredData: member
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Person",
+          name: member.name,
+          jobTitle: member.position || "三原市議会議員",
+          affiliation: member.party || undefined,
+          memberOf: {
+            "@type": "GovernmentOrganization",
+            name: "三原市議会",
+          },
+          url: `https://giiin.info/?view=memberDetail&member=${member._id}`,
+          image: member.photoUrl || undefined,
+        }
+      : undefined,
+  });
 
   if (!member) {
     return (

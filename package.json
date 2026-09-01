@@ -7,9 +7,9 @@
     "dev": "npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "vite --open",
     "dev:backend": "convex dev",
-    "build": "vite build",
-    "build:prod": "CONVEX_DEPLOYMENT=prod:shiny-pony-367 VITE_CONVEX_URL=https://shiny-pony-367.convex.cloud vite build",
-    "build:dev": "CONVEX_DEPLOYMENT=dev:outgoing-owl-339 VITE_CONVEX_URL=https://outgoing-owl-339.convex.cloud vite build",
+    "build": "node scripts/generate-sitemap.mjs && vite build",
+    "build:prod": "CONVEX_DEPLOYMENT=prod:shiny-pony-367 VITE_CONVEX_URL=https://shiny-pony-367.convex.cloud node scripts/generate-sitemap.mjs && CONVEX_DEPLOYMENT=prod:shiny-pony-367 VITE_CONVEX_URL=https://shiny-pony-367.convex.cloud vite build",
+    "build:dev": "CONVEX_DEPLOYMENT=dev:outgoing-owl-339 VITE_CONVEX_URL=https://outgoing-owl-339.convex.cloud node scripts/generate-sitemap.mjs && CONVEX_DEPLOYMENT=dev:outgoing-owl-339 VITE_CONVEX_URL=https://outgoing-owl-339.convex.cloud vite build",
     "lint": "tsc -p convex -noEmit --pretty false && tsc -p . -noEmit --pretty false && convex dev --once && vite build"
   },
   "dependencies": {

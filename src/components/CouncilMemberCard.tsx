@@ -6,7 +6,13 @@ interface CouncilMemberCardProps {
 }
 
 export function CouncilMemberCard({ member, onClick }: CouncilMemberCardProps) {
-  const handleClick = () => {
+  // 検索エンジンのクローラーがリンクとして認識できるよう実体のあるhrefを持たせつつ、
+  // 実際のクリックはSPA内遷移として処理する
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      return; // 新しいタブで開く操作等はブラウザ標準の挙動に任せる
+    }
+    e.preventDefault();
     if (onClick) {
       onClick();
     } else {
@@ -16,9 +22,10 @@ export function CouncilMemberCard({ member, onClick }: CouncilMemberCardProps) {
   };
 
   return (
-    <div
+    <a
+      href={`?view=memberDetail&member=${member._id}`}
       onClick={handleClick}
-      className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer group overflow-hidden"
+      className="block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer group overflow-hidden"
     >
       {/* Photo Section */}
       <div className="relative h-32 sm:h-40 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
@@ -89,6 +96,6 @@ export function CouncilMemberCard({ member, onClick }: CouncilMemberCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </a>
   );
 }
