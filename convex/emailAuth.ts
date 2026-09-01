@@ -128,6 +128,25 @@ export const adminSetPassword = internalAction({
   },
 });
 
+// 内部関数: 直近一定時間内に同じメールアドレス宛てに送信されたトークン数を取得（レート制限用）
+export const countRecentTokens = internalQuery({
+  args: {
+    email: v.string(),
+    type: v.union(v.literal("verification"), v.literal("password_reset")),
+    sinceTimestamp: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const tokens = await ctx.db
+      .query("emailVerificationTokens")
+      .withIndex("by_email_and_type", (q) =>
+        q.eq("email", args.email).eq("type", args.type)
+      )
+      .collect();
+
+    return tokens.filter((t) => t._creationTime >= args.sinceTimestamp).length;
+  },
+});
+
 // 内部関数: 有効なパスワードリセットトークンを検索（未使用のもののみ）
 export const getValidPasswordResetToken = internalQuery({
   args: { token: v.string() },

@@ -15,6 +15,16 @@ export const sendVerificationEmail = action({
   },
   handler: async (ctx, args) => {
     try {
+      // レート制限: 15分間に3通まで
+      const recentCount = await ctx.runQuery(internal.emailAuth.countRecentTokens, {
+        email: args.email,
+        type: "verification",
+        sinceTimestamp: Date.now() - 15 * 60 * 1000,
+      });
+      if (recentCount >= 3) {
+        return { success: false, error: "リクエストが多すぎます。しばらく時間をおいてから再度お試しください。" };
+      }
+
       // 削除されたユーザーのデータをクリーンアップ
       await ctx.runMutation(internal.emailAuth.cleanupDeletedUserData, {
         email: args.email
@@ -214,6 +224,16 @@ export const sendPasswordResetEmail = action({
       
       if (!user) {
         // セキュリティのため、ユーザーが存在しない場合でも成功を返す
+        return { success: true };
+      }
+
+      // レート制限: 15分間に3通まで（存在チェックとの一貫性のため、制限時も成功として返す）
+      const recentCount = await ctx.runQuery(internal.emailAuth.countRecentTokens, {
+        email: args.email,
+        type: "password_reset",
+        sinceTimestamp: Date.now() - 15 * 60 * 1000,
+      });
+      if (recentCount >= 3) {
         return { success: true };
       }
 

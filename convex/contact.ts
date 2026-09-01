@@ -13,6 +13,18 @@ export const submitContactForm = mutation({
     category: v.string(),
   },
   handler: async (ctx, args) => {
+    // レート制限: 同一メールアドレスから10分間に3件まで
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    const recentMessages = await ctx.db
+      .query("contactMessages")
+      .withIndex("by_submitted_at", (q) => q.gte("submittedAt", tenMinutesAgo))
+      .filter((q) => q.eq(q.field("email"), args.email))
+      .collect();
+
+    if (recentMessages.length >= 3) {
+      throw new Error("送信回数の上限に達しました。しばらく時間をおいてから再度お試しください。");
+    }
+
     const contactId = await ctx.db.insert("contactMessages", {
       name: args.name,
       email: args.email,

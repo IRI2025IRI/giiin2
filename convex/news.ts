@@ -138,6 +138,15 @@ export const update = mutation({
     }
 
     const { id, ...updates } = args;
+
+    // サムネイルが差し替えられた場合、古いファイルをストレージから削除
+    if (updates.thumbnailId !== undefined) {
+      const existing = await ctx.db.get(id);
+      if (existing?.thumbnailId && existing.thumbnailId !== updates.thumbnailId) {
+        await ctx.storage.delete(existing.thumbnailId);
+      }
+    }
+
     await ctx.db.patch(id, updates);
   },
 });
@@ -158,6 +167,11 @@ export const remove = mutation({
 
     if (!adminUser) {
       throw new Error("管理者権限が必要です");
+    }
+
+    const existing = await ctx.db.get(args.id);
+    if (existing?.thumbnailId) {
+      await ctx.storage.delete(existing.thumbnailId);
     }
 
     await ctx.db.delete(args.id);

@@ -7,6 +7,7 @@ import { SignOutButton } from "./SignOutButton";
 import { ScrollToTopButton } from "./components/ScrollToTopButton";
 import { LoginModal } from "./components/LoginModal";
 import { useUrlNavigation } from "./hooks/useUrlNavigation";
+import { isLINEBrowser, safeScrollTo } from "./lib/utils";
 
 // コンポーネントを通常のimportで読み込み（パフォーマンス最適化済み）
 import { Dashboard } from "./components/Dashboard";
@@ -95,10 +96,12 @@ function formatResponseContent(content: string) {
 }
 
 // ページトップにスクロールするヘルパー関数
+// LINEアプリ内ブラウザは behavior: 'smooth' が正しく動作しないことがあるため、
+// LINEブラウザでは常に即時スクロールにフォールバックする
 const scrollToTop = (smooth: boolean = true) => {
-  window.scrollTo({
+  safeScrollTo({
     top: 0,
-    behavior: smooth ? 'smooth' : 'auto'
+    behavior: smooth && !isLINEBrowser() ? 'smooth' : 'auto'
   });
 };
 

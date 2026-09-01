@@ -58,10 +58,25 @@ export const create = mutation({
   },
 });
 
-// ユーザーの属性情報を取得
+// ユーザーの属性情報を取得（管理者用）
 export const getByUserId = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const callerId = await getAuthUserId(ctx);
+    if (!callerId) {
+      throw new Error("認証が必要です");
+    }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", callerId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     return await ctx.db
       .query("userDemographics")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))

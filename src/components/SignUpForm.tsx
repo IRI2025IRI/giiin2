@@ -4,6 +4,23 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 
+// サインイン直後は認証セッションの反映に若干のタイムラグがあるため、
+// 失敗時は短い間隔でリトライしてから諦める
+async function withAuthRetry<T>(fn: () => Promise<T>, maxAttempts = 5, delayMs = 500): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 interface SignUpFormProps {
   onSuccess?: () => void;
   onSwitchToSignIn?: () => void;
@@ -63,20 +80,22 @@ export function SignUpForm({ onSuccess, onSwitchToSignIn, onShowTerms }: SignUpF
       const result = await signIn("password", formData);
       console.log("SignIn result:", result);
 
-      // 少し待ってからユーザー情報を取得し、処理を実行
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       // アカウント作成成功後、属性情報を保存
+      // （サインイン直後は認証セッションの反映に若干のタイムラグがあるためリトライする）
+      let demographicsSaved = true;
       try {
-        await saveDemographics({
-          ageGroup: ageGroup as any,
-          gender: gender as any,
-          region: region as any,
-        });
+        await withAuthRetry(() =>
+          saveDemographics({
+            ageGroup: ageGroup as any,
+            gender: gender as any,
+            region: region as any,
+          })
+        );
         console.log("Demographics saved successfully");
       } catch (demoError) {
         console.error("Demographics save error:", demoError);
-        // 属性情報の保存に失敗してもアカウント作成は成功とする
+        demographicsSaved = false;
+        // 属性情報の保存に失敗してもアカウント作成自体は成功とする
       }
 
       // メール認証を送信
@@ -87,6 +106,10 @@ export function SignUpForm({ onSuccess, onSwitchToSignIn, onShowTerms }: SignUpF
         console.error("Email verification error:", emailError);
         toast.success("アカウントが作成されました。");
         toast.warning("認証メールの送信に失敗しました。後でお試しください。");
+      }
+
+      if (!demographicsSaved) {
+        toast.warning("年代・性別・地域の登録に失敗しました。");
       }
 
       onSuccess?.();

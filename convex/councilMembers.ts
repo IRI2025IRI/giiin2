@@ -170,6 +170,15 @@ export const update = mutation({
     }
 
     const { id, ...updateData } = args;
+
+    // 写真が差し替えられた場合、古いファイルをストレージから削除
+    if (updateData.photoId !== undefined) {
+      const existing = await ctx.db.get(id);
+      if (existing?.photoId && existing.photoId !== updateData.photoId) {
+        await ctx.storage.delete(existing.photoId);
+      }
+    }
+
     await ctx.db.patch(id, updateData);
   },
 });
@@ -190,6 +199,11 @@ export const remove = mutation({
 
     if (!adminUser) {
       throw new Error("管理者権限が必要です");
+    }
+
+    const existing = await ctx.db.get(args.id);
+    if (existing?.photoId) {
+      await ctx.storage.delete(existing.photoId);
     }
 
     await ctx.db.delete(args.id);

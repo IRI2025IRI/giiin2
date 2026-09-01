@@ -190,6 +190,13 @@ export const update = mutation({
     }
 
     const { slideId, ...updateData } = args;
+
+    // 画像が差し替えられた場合、古いファイルをストレージから削除
+    const existingSlide = await ctx.db.get(slideId);
+    if (existingSlide?.imageId && finalImageId && existingSlide.imageId !== finalImageId) {
+      await ctx.storage.delete(existingSlide.imageId);
+    }
+
     return await ctx.db.patch(slideId, {
       ...updateData,
       imageId: finalImageId,
@@ -216,6 +223,11 @@ export const remove = mutation({
 
     if (!adminUser) {
       throw new Error("管理者権限が必要です");
+    }
+
+    const existingSlide = await ctx.db.get(args.slideId);
+    if (existingSlide?.imageId) {
+      await ctx.storage.delete(existingSlide.imageId);
     }
 
     return await ctx.db.delete(args.slideId);

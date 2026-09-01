@@ -35,6 +35,21 @@ export const loggedInUser = query({
 export const getUserByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("認証が必要です");
+    }
+
+    // 管理者権限チェック
+    const adminUser = await ctx.db
+      .query("adminUsers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!adminUser) {
+      throw new Error("管理者権限が必要です");
+    }
+
     const user = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", args.email))

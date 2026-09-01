@@ -67,6 +67,15 @@ export function DataMigration() {
       return;
     }
 
+    if (importOptions.clearExistingData) {
+      const confirmed = window.confirm(
+        "既存の全データが削除されます。この操作は元に戻せません。\n本当に実行しますか？"
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setIsImporting(true);
     try {
       // ファイルを読み込み
