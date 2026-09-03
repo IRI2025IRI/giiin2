@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
@@ -9,6 +9,7 @@ import { LoginModal } from "./components/LoginModal";
 import { InfoTooltip } from "./components/InfoTooltip";
 import { useUrlNavigation } from "./hooks/useUrlNavigation";
 import { isLINEBrowser, safeScrollTo, getYouTubeThumbnailUrl } from "./lib/utils";
+import { formatResponseContent } from "./lib/textHighlight";
 
 // コンポーネントを通常のimportで読み込み（パフォーマンス最適化済み）
 import { Dashboard } from "./components/Dashboard";
@@ -23,6 +24,7 @@ import { FAQ } from "./components/FAQ";
 import { TermsAndPrivacy } from "./components/TermsAndPrivacy";
 import { ExternalArticles } from "./components/ExternalArticles";
 import { ExternalArticleDetail } from "./components/ExternalArticleDetail";
+import { Report } from "./components/Report";
 
 // 管理画面は一般利用者の大半が開かないため、初期バンドルから分離して遅延読み込みする
 // （TermsAndPrivacyはLoginModal側でも使われておりバンドル分離の効果がないため対象外）
@@ -52,44 +54,6 @@ function usePerformanceMode() {
 }
 
 // ローディングコンポーネント（削除）
-
-// ヘルパー関数：1行のテキスト中の特定フレーズだけをReact要素に置き換える（HTML注入なし）
-function highlightPhrase(nodes: ReactNode[], phrase: string, className: string): ReactNode[] {
-  const result: ReactNode[] = [];
-  nodes.forEach((node) => {
-    if (typeof node !== 'string') {
-      result.push(node);
-      return;
-    }
-    const segments = node.split(phrase);
-    segments.forEach((segment, i) => {
-      if (i > 0) {
-        result.push(
-          <span key={`${phrase}-${result.length}`} className={className}>{phrase}</span>
-        );
-      }
-      if (segment) result.push(segment);
-    });
-  });
-  return result;
-}
-
-// ヘルパー関数：回答内容のキーワードを装飾
-function formatResponseContent(content: string) {
-  return content.split('\n').map((line, lineIndex) => {
-    let parts: ReactNode[] = [line];
-
-    if (line.includes('質問側の内容')) {
-      parts = highlightPhrase(parts, '質問側の内容', 'ga-kw q');
-    }
-
-    if (line.includes('市側の回答')) {
-      parts = highlightPhrase(parts, '市側の回答', 'ga-kw a');
-    }
-
-    return <div key={lineIndex} className="mb-1">{parts}</div>;
-  });
-}
 
 // ページトップにスクロールするヘルパー関数
 // LINEアプリ内ブラウザは behavior: 'smooth' が正しく動作しないことがあるため、
@@ -350,6 +314,8 @@ function AppContent() {
               return <FAQ />;
             case "contact":
               return <Contact />;
+            case "report":
+              return <Report onMemberClick={handleMemberClick} />;
             case "admin":
               // isAdmin が確定して true の場合のみ管理画面を描画する（URL直打ちでのバイパス対策）
               return isAdmin === true ? <AdminPanel /> : null;
@@ -375,6 +341,7 @@ function AppContent() {
 
   const allNavSteps = [
     { key: "dashboard", name: "ダッシュボード" },
+    { key: "report", name: "レポート" },
     ...menuItems,
     ...(isAdmin ? [{ key: "admin", name: "管理" }] : []),
   ];

@@ -1369,6 +1369,91 @@ a:focus {
 .ga-like-bar { display: flex; align-items: center; gap: 16px; padding: 16px clamp(16px, 4vw, 26px); flex-wrap: wrap; }
 .ga-like-btn { display: flex; align-items: center; gap: 8px; background: var(--ga-gold-soft); color: #8a6d16; border: none; padding: 9px 18px; border-radius: 999px; font-weight: 700; font-size: 0.86rem; cursor: pointer; }
 
+/* ---------- 一般質問レポート（会議番号ごとのテーマ別まとめ） ---------- */
+.ga-report-summary { background: var(--ga-teal-deep); color: #eaf6f6; border-radius: 16px; padding: clamp(24px, 5vw, 34px); position: relative; overflow: hidden; }
+.ga-report-summary::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 90% at 100% 0%, rgba(231, 183, 64, 0.2), transparent 60%); pointer-events: none; }
+.ga-report-summary > * { position: relative; }
+.ga-report-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(231, 183, 64, 0.18); color: var(--ga-gold); font-family: "Josefin Sans", sans-serif; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.72rem; padding: 6px 14px; border-radius: 999px; margin-bottom: 16px; }
+.ga-report-summary .lead { font-size: 1rem; font-weight: 700; color: #fff; margin: 0 0 18px; line-height: 1.8; }
+.ga-report-summary .list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.ga-report-summary .item { display: flex; gap: 14px; align-items: flex-start; }
+.ga-report-summary .item .num { font-family: "Josefin Sans", sans-serif; font-weight: 300; font-size: 1.3rem; color: var(--ga-gold); flex-shrink: 0; line-height: 1.4; }
+.ga-report-summary .item p { margin: 0; font-size: 0.88rem; line-height: 1.9; color: #cfe6e6; }
+.ga-report-summary .close { margin: 0; font-size: 0.82rem; color: #a9c9c9; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.16); }
+
+.ga-report-theme {
+  position: relative; overflow: hidden; padding: clamp(40px, 7vw, 64px) 0; border-top: 3px solid var(--ga-line);
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.ga-report-theme.in-view { opacity: 1; transform: none; }
+.ga-report-theme:first-of-type { border-top: none; }
+.ga-report-theme.tone-teal { background: linear-gradient(180deg, var(--ga-teal-soft) 0%, var(--ga-paper) 78%); border-top-color: var(--ga-teal); }
+.ga-report-theme.tone-gold { background: linear-gradient(180deg, var(--ga-gold-soft) 0%, var(--ga-paper) 78%); border-top-color: var(--ga-gold); }
+.ga-report-theme .bg-num {
+  position: absolute; right: clamp(-16px, -1vw, 4px); top: clamp(-30px, -3vw, -10px);
+  font-family: "Josefin Sans", sans-serif; font-weight: 300; line-height: 0.75;
+  font-size: clamp(6rem, 20vw, 15rem); color: rgba(11, 79, 88, 0.07);
+  pointer-events: none; user-select: none; z-index: 0;
+}
+.ga-report-theme.tone-gold .bg-num { color: rgba(138, 109, 22, 0.09); }
+.ga-report-theme-inner { position: relative; z-index: 1; padding: 0 clamp(16px, 4vw, 32px); }
+@media (prefers-reduced-motion: reduce) { .ga-report-theme { opacity: 1; transform: none; transition: none; } }
+
+.ga-report-qlist { display: flex; flex-direction: column; gap: 14px; }
+.ga-report-qcard { background: var(--ga-surface); border: 1px solid var(--ga-line); border-radius: 14px; padding: 20px 22px; box-shadow: var(--ga-shadow); }
+.ga-report-qcard .who { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.ga-report-qcard .name { font-size: 0.86rem; font-weight: 700; color: var(--ga-ink); }
+.ga-report-qcard .title { font-size: 0.98rem; font-weight: 700; color: var(--ga-ink); margin: 0 0 12px; line-height: 1.6; }
+
+.ga-report-qa { position: relative; padding-top: 12px; border-top: 1px dashed var(--ga-line); }
+.ga-report-qa .text { font-size: 0.86rem; color: var(--ga-muted); line-height: 2; white-space: pre-line; max-height: 220px; overflow: hidden; }
+.ga-report-qa.expanded .text { max-height: none; }
+.ga-report-qa:not(.expanded) .text::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 34px; height: 60px;
+  background: linear-gradient(rgba(255, 255, 255, 0), var(--ga-surface));
+}
+.ga-report-qa .ga-kw { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 700; margin: 10px 0 4px; }
+.ga-report-qa .ga-kw.q { background: var(--ga-gold-soft); color: #8a6d16; }
+.ga-report-qa .ga-kw.a { background: var(--ga-teal-soft); color: var(--ga-teal-deep); }
+.ga-report-qa-toggle {
+  display: block; width: 100%; text-align: center; margin-top: 8px; padding: 8px;
+  background: none; border: none; color: var(--ga-teal-deep); font-weight: 700; font-size: 0.8rem;
+  font-family: "Noto Sans JP", sans-serif; cursor: pointer;
+}
+
+/* ---------- 印刷／PDF保存（レポートページの「PDFを保存」ボタン用） ----------
+   ブラウザ標準の印刷機能（window.print）を使う。ライブラリは追加しない。 */
+@media print {
+  .no-print,
+  .ga-topbar,
+  .ga-menu-toggle,
+  .ga-report-qa-toggle,
+  footer.text-center {
+    display: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* 折りたたみ中の質疑応答も印刷時は必ず全文展開する */
+  .ga-report-qa .text { max-height: none !important; overflow: visible !important; }
+  .ga-report-qa:not(.expanded) .text::after { display: none !important; }
+
+  /* スクロール出現アニメーションの途中で止まって見えないように */
+  .ga-report-theme, .ga-reveal { opacity: 1 !important; transform: none !important; }
+
+  /* カードの途中でページが割れて読みにくくなるのを避ける */
+  .ga-report-qcard, .ga-report-summary .item, .ga-surface-card {
+    break-inside: avoid;
+  }
+
+  body { background: #fff !important; }
+}
+
 /* ---------- 管理パネル：内部のダークテーマ管理画面を案Aの明るいトーンに合わせる ----------
    管理画面は13個のCRUD画面から成り、個別に作り直す代わりに、
    既存のダークテーマ用クラス（amano-*・Tailwindのgray/yellow/cyan等）を

@@ -431,6 +431,41 @@ export const getSessionNumbers = query({
   },
 });
 
+// 会議番号ごとの一般質問レポート用データ（質問内容・議員情報・回答内容をまとめて取得）
+export const getSessionReportData = query({
+  args: { sessionNumber: v.string() },
+  handler: async (ctx, args) => {
+    const questions = await ctx.db
+      .query("questions")
+      .filter((q) => q.eq(q.field("sessionNumber"), args.sessionNumber))
+      .collect();
+
+    const questionsWithDetails = await Promise.all(
+      questions.map(async (question) => {
+        const member = await ctx.db.get(question.councilMemberId);
+        const responses = await ctx.db
+          .query("responses")
+          .withIndex("by_question", (q) => q.eq("questionId", question._id))
+          .collect();
+
+        return {
+          _id: question._id,
+          title: question.title,
+          category: question.category,
+          content: question.content,
+          status: question.status,
+          councilMemberId: question.councilMemberId,
+          memberName: member?.name || "不明",
+          memberParty: member?.party,
+          answer: responses.map((r) => r.content).join("\n\n---\n\n"),
+        };
+      })
+    );
+
+    return questionsWithDetails;
+  },
+});
+
 export const getTopLikedQuestions = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
