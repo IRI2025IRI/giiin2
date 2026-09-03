@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense, type ReactNode } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import { Authenticated, Unauthenticated } from "convex/react";
@@ -8,7 +8,7 @@ import { ScrollToTopButton } from "./components/ScrollToTopButton";
 import { LoginModal } from "./components/LoginModal";
 import { InfoTooltip } from "./components/InfoTooltip";
 import { useUrlNavigation } from "./hooks/useUrlNavigation";
-import { isLINEBrowser, safeScrollTo, getYouTubeEmbedUrl } from "./lib/utils";
+import { isLINEBrowser, safeScrollTo, getYouTubeThumbnailUrl } from "./lib/utils";
 
 // コンポーネントを通常のimportで読み込み（パフォーマンス最適化済み）
 import { Dashboard } from "./components/Dashboard";
@@ -80,19 +80,11 @@ function formatResponseContent(content: string) {
     let parts: ReactNode[] = [line];
 
     if (line.includes('質問側の内容')) {
-      parts = highlightPhrase(
-        parts,
-        '質問側の内容',
-        'bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-2 py-1 rounded font-bold amano-text-glow'
-      );
+      parts = highlightPhrase(parts, '質問側の内容', 'ga-kw q');
     }
 
     if (line.includes('市側の回答')) {
-      parts = highlightPhrase(
-        parts,
-        '市側の回答',
-        'bg-gradient-to-r from-cyan-400 to-blue-400 text-black px-2 py-1 rounded font-bold amano-text-glow'
-      );
+      parts = highlightPhrase(parts, '市側の回答', 'ga-kw a');
     }
 
     return <div key={lineIndex} className="mb-1">{parts}</div>;
@@ -121,7 +113,6 @@ function AppContent() {
   // パフォーマンス最適化
   const performanceMode = usePerformanceMode();
   const enableAnimations = performanceMode === 'high';
-  const enableBlur = performanceMode !== 'low';
 
   // メニュー設定を取得
   const visibleMenus = useQuery(api.menuSettings.getVisibleMenus);
@@ -170,24 +161,23 @@ function AppContent() {
 
   // メニューアイテムの定義（デフォルト）
   const defaultMenuItems = [
-    { key: "questions", name: "質問・回答", icon: "❓" },
-    { key: "members", name: "議員一覧", icon: "👥" },
-    { key: "rankings", name: "統計", icon: "📊" },
-    { key: "news", name: "お知らせ", icon: "📢" },
-    { key: "externalArticles", name: "議員ブログ・SNS", icon: "📰" },
-    { key: "faq", name: "よくある質問", icon: "💡" },
-    { key: "contact", name: "お問い合わせ", icon: "📧" },
+    { key: "questions", name: "質問・回答" },
+    { key: "members", name: "議員一覧" },
+    { key: "rankings", name: "統計" },
+    { key: "news", name: "お知らせ" },
+    { key: "externalArticles", name: "議員ブログ・SNS" },
+    { key: "faq", name: "よくある質問" },
+    { key: "contact", name: "お問い合わせ" },
   ];
 
   // 表示するメニューアイテムを決定（メモ化）
   const menuItems = useMemo(() => {
-    return visibleMenus && visibleMenus.length > 0 
+    return visibleMenus && visibleMenus.length > 0
       ? visibleMenus.map(menu => ({
           key: menu.menuKey,
           name: menu.menuName,
-          icon: defaultMenuItems.find(item => item.key === menu.menuKey)?.icon || "📄"
         }))
-      : defaultMenuItems.filter(item => 
+      : defaultMenuItems.filter(item =>
           // デフォルトでは議員ブログ・SNSは非表示
           item.key !== "externalArticles"
         );
@@ -377,154 +367,123 @@ function AppContent() {
         }
   };
 
-  // 軽量化されたサイドバースタイル
-  const sidebarClass = enableBlur 
-    ? "amano-bg-sidebar" 
-    : "bg-gray-900/95";
+  const roleLabel =
+    userRole === "superAdmin" ? "スーパー管理者" :
+    userRole === "admin" ? "管理者" :
+    userRole === "user" ? "一般ユーザー" :
+    userRole === "guest" ? "ゲスト" : "";
 
-  const buttonClass = enableAnimations
-    ? "w-full text-left px-4 py-3 rounded-lg transition-all duration-300 flex items-center space-x-3"
-    : "w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3";
+  const allNavSteps = [
+    { key: "dashboard", name: "ダッシュボード" },
+    ...menuItems,
+    ...(isAdmin ? [{ key: "admin", name: "管理" }] : []),
+  ];
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen">
-      {/* サイドバー - PC版では固定、モバイル版では通常通り */}
-      <div className={`lg:w-64 lg:fixed lg:h-screen lg:overflow-y-auto ${sidebarClass} border-r border-purple-500/30 ${showMobileMenu ? 'block' : 'hidden lg:block'}`}>
-        <div className="p-6">
-          {/* ロゴ・タイトル */}
-          <div className="text-center mb-8">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
-               GIIIN/ギイーン
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">「何してるの？」を身近に。</p>
-          </div>
+    <div className="min-h-screen flex flex-col">
+      {/* トップバー */}
+      <header className="ga-topbar">
+        <div className="ga-topbar-inner">
+          <button onClick={() => handleViewChange("dashboard")} className="ga-brand">
+            GIIIN / ギイーン
+          </button>
 
-          {/* ナビゲーション */}
-          <nav className="space-y-2">
-            <button
-              onClick={() => handleViewChange("dashboard")}
-              className={`${buttonClass} ${
-                currentView === "dashboard"
-                  ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
-                  : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
-              }`}
-            >
-              <span className="text-xl">🏠</span>
-              <span className="font-medium">ダッシュボード</span>
-            </button>
-
-            {menuItems.map((item) => (
+          {/* ナビゲーション：PCでは横並び、モバイルではドロップダウン */}
+          <nav className={`ga-nav ${showMobileMenu ? "open" : ""}`} id="mainnav">
+            {allNavSteps.map((item, index) => (
               <button
                 key={item.key}
-                onClick={() => handleViewChange(item.key)}
-                className={`${buttonClass} ${
-                  currentView === item.key
-                    ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
-                    : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
-                }`}
+                onClick={() => { handleViewChange(item.key); setShowMobileMenu(false); }}
+                className={currentView === item.key ? "active" : ""}
               >
-                <span className="text-xl">{item.icon}</span>
-                <span className="font-medium">{item.name}</span>
+                <span className="ga-step">{String(index + 1).padStart(2, "0")}</span>
+                {item.name}
               </button>
             ))}
 
-            {/* 管理メニューは管理者のみ表示 */}
-            <Authenticated>
-              {isAdmin && (
+            {/* モバイルのみ：アカウント情報 */}
+            <div className="lg:hidden pt-3 mt-1 border-t border-white/10">
+              <Authenticated>
+                {loggedInUser && (
+                  <div className="mb-3 text-xs text-gray-300 pt-3">
+                    ログイン中：<span className="font-medium" style={{ color: "var(--ga-gold)" }}>{loggedInUser.name || loggedInUser.email || "ユーザー"}</span>
+                    {roleLabel && <span className="block text-cyan-300 mt-0.5">{roleLabel}</span>}
+                  </div>
+                )}
+                <SignOutButton />
+              </Authenticated>
+              <Unauthenticated>
                 <button
-                  onClick={() => handleViewChange("admin")}
-                  className={`${buttonClass} ${
-                    currentView === "admin"
-                      ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
-                      : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
-                  }`}
+                  onClick={() => { setShowLoginModal(true); setShowMobileMenu(false); }}
+                  className="ga-signin w-full mt-3"
                 >
-                  <span className="text-xl">🛠️</span>
-                  <span className="font-medium">管理</span>
+                  新規/ログイン
                 </button>
-              )}
-            </Authenticated>
+              </Unauthenticated>
+            </div>
           </nav>
 
-          {/* ユーザー情報 */}
-          <div className="mt-8 pt-6 border-t border-purple-500/30">
-            <Authenticated>
-              {/* ユーザー名と権限表示 */}
-              {loggedInUser && (
-                <div className="mb-4 p-3 rounded-lg amano-bg-glass border border-purple-500/20">
-                  <div className="text-sm text-gray-300 mb-1">ログイン中</div>
-                  <div className="font-medium text-yellow-400 text-sm mb-1">
+          <div className="ga-topbar-right">
+            {/* デスクトップのみ：アカウント情報 */}
+            <div className="hidden lg:flex items-center gap-3">
+              <Authenticated>
+                {loggedInUser && (
+                  <span className="text-xs text-gray-200 text-right leading-tight">
                     {loggedInUser.name || loggedInUser.email || "ユーザー"}
-                  </div>
-                  <div className="text-xs text-cyan-400">
-                    {userRole === "superAdmin" && "🔧 スーパー管理者"}
-                    {userRole === "admin" && "⚙️ 管理者"}
-                    {userRole === "user" && "👤 一般ユーザー"}
-                    {userRole === "guest" && "🔒 ゲスト"}
-                  </div>
-                </div>
-              )}
-              <SignOutButton />
-            </Authenticated>
-            <Unauthenticated>
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="w-full px-4 py-2 bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300"
-              >
-                新規/ログイン
-              </button>
-            </Unauthenticated>
-          </div>
+                    {roleLabel && <span className="block text-cyan-300">{roleLabel}</span>}
+                  </span>
+                )}
+                <SignOutButton />
+              </Authenticated>
+              <Unauthenticated>
+                <button onClick={() => setShowLoginModal(true)} className="ga-signin">
+                  ログイン
+                </button>
+              </Unauthenticated>
+            </div>
 
-          {/* フッター */}
-          <div className="mt-8 pt-6 border-t border-purple-500/30 text-center">
-            <button
-              onClick={() => handleViewChange("terms")}
-              className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
-            >
-              利用規約・プライバシーポリシー
-            </button>
-            <p className="text-xs text-gray-500 mt-2">©2025 GIIIN</p>
-          </div>
-        </div>
-      </div>
-
-      {/* メインコンテンツ - PC版ではサイドバー分の左マージンを追加 */}
-      <div className="flex-1 flex flex-col lg:ml-64">
-        {/* モバイルヘッダー */}
-        <div className="lg:hidden bg-gray-900/95 backdrop-blur-sm border-b border-purple-500/30 p-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-              GIIIN/ギイーン
-            </h1>
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="p-2 text-gray-300 hover:text-white transition-colors"
+              className="ga-menu-toggle"
+              aria-label="メニューを開閉"
+              aria-expanded={showMobileMenu}
+              aria-controls="mainnav"
             >
-              <span className="text-xl">{showMobileMenu ? "✕" : "☰"}</span>
+              {showMobileMenu ? "✕" : "☰"}
             </button>
           </div>
         </div>
+      </header>
 
-        {/* コンテンツエリア */}
-        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center py-12">
-                <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            }
-          >
-            {renderContent()}
-          </Suspense>
-        </main>
-      </div>
+      {/* コンテンツエリア */}
+      <main className="flex-1 p-4 lg:p-8 max-w-6xl w-full mx-auto">
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          }
+        >
+          {renderContent()}
+        </Suspense>
+      </main>
+
+      {/* フッター */}
+      <footer className="text-center py-6 border-t border-purple-800/40 text-xs text-gray-500">
+        <button
+          onClick={() => handleViewChange("terms")}
+          className="hover:text-gray-300 transition-colors"
+        >
+          利用規約・プライバシーポリシー
+        </button>
+        <p className="mt-2">©2025 GIIIN</p>
+      </footer>
 
       {/* ログインモーダル */}
       {showLoginModal && (
-        <LoginModal 
-          isOpen={showLoginModal} 
-          onClose={() => setShowLoginModal(false)} 
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
         />
       )}
     </div>
@@ -552,135 +511,117 @@ function QuestionDetail({
 }) {
   const question = useQuery(api.questions.getById, { questionId });
   const responses = useQuery(api.questions.getResponses, { questionId });
+  const user = useQuery(api.auth.loggedInUser);
+  const toggleLike = useMutation(api.likes.toggle);
+
+  const handleLike = async () => {
+    if (!user) {
+      alert("気になるするにはログインが必要です");
+      return;
+    }
+    try {
+      await toggleLike({ questionId });
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+    }
+  };
 
   if (!question) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
+        <div className="ga-spinner"></div>
       </div>
     );
   }
 
+  const thumbnailUrl = question.youtubeUrl ? getYouTubeThumbnailUrl(question.youtubeUrl) : null;
+
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* ヘッダー */}
-      <div className="flex items-center space-x-4 mb-6">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-2 text-cyan-400 hover:text-yellow-400 transition-colors"
-        >
-          <span>←</span>
-          <span>戻る</span>
+    <div className="ga-page">
+      <div className="ga-main" style={{ paddingTop: "clamp(24px, 5vw, 40px)" }}>
+        <button onClick={onBack} className="ga-backlink ga-block">
+          ← 質問一覧に戻る
         </button>
-      </div>
 
-      {/* 質問詳細 */}
-      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-        <div className="flex items-start space-x-4 mb-6">
-          {question.memberPhotoUrl ? (
-            <img
-              src={question.memberPhotoUrl}
-              alt={question.memberName}
-              className="w-16 h-16 rounded-full object-cover border-2 border-yellow-400"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-              {question.memberName.charAt(0)}
-            </div>
-          )}
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-yellow-400 mb-2 amano-text-glow">
-              {question.title}
-            </h1>
-            <div className="flex items-center space-x-4 text-sm text-gray-300 mb-4">
-              <button
-                onClick={() => onMemberClick(question.councilMemberId)}
-                className="text-cyan-400 hover:text-yellow-400 transition-colors font-medium"
-              >
-                {question.memberName}
-              </button>
-              {question.memberParty && (
-                <span className="text-gray-400">({question.memberParty})</span>
+        {/* 質問詳細ヘッダー */}
+        <div className="ga-block ga-surface-card ga-detail-head">
+          <div className="ga-detail-top-row">
+            <span className="ga-pill status">{question.status === "answered" ? "回答済み" : question.status === "pending" ? "回答待ち" : "アーカイブ"}</span>
+            <span className="ga-pill cat">{question.category}</span>
+            <span className="ga-qa-date">{question.sessionNumber || new Date(question.sessionDate).toLocaleDateString("ja-JP")}</span>
+          </div>
+          <h1 className="ga-detail-title">{question.title}</h1>
+          <div className="ga-member-block">
+            <button
+              onClick={() => onMemberClick(question.councilMemberId)}
+              className="ga-avatar"
+              style={{ border: "none", cursor: "pointer", padding: 0 }}
+            >
+              {question.memberPhotoUrl ? (
+                <img src={question.memberPhotoUrl} alt={question.memberName} />
+              ) : (
+                question.memberName.charAt(0)
               )}
-              <span>📅 {new Date(question.sessionDate).toLocaleDateString("ja-JP")}</span>
-              <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-1 rounded-full text-xs">
-                {question.category}
-              </span>
+            </button>
+            <div>
+              <div className="name">{question.memberName}</div>
+              {question.memberParty && <div className="sub">{question.memberParty}</div>}
             </div>
           </div>
         </div>
 
-        <div className="prose prose-invert max-w-none">
-          <div className="text-gray-200 leading-relaxed whitespace-pre-wrap">
-            {question.content}
-          </div>
+        {/* 質問内容・動画 */}
+        <div className="ga-block ga-surface-card ga-content-block">
+          <h2>質問内容</h2>
+          <div className="ga-body-text">{question.content}</div>
+
+          {question.youtubeUrl && (
+            <>
+              <h2 style={{ marginTop: 26 }}>動画</h2>
+              {thumbnailUrl ? (
+                <a
+                  href={question.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ga-video-frame"
+                  style={{ backgroundImage: `url(${thumbnailUrl})` }}
+                >
+                  <div className="ga-play-overlay"><div className="ga-play-btn"></div></div>
+                  <span className="ga-yt-label">▶ YouTube で見る</span>
+                </a>
+              ) : (
+                <a href={question.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ga-btn ga-btn-ghost" style={{ marginTop: 16 }}>
+                  YouTube で見る →
+                </a>
+              )}
+            </>
+          )}
         </div>
 
-        {question.youtubeUrl && (
-          <div className="mt-6">
-            <h3 className="text-lg font-bold text-yellow-400 mb-3">📹 動画</h3>
-            {getYouTubeEmbedUrl(question.youtubeUrl) ? (
-              <div className="relative w-full rounded-lg overflow-hidden amano-crystal-border" style={{ paddingTop: "56.25%" }}>
-                <iframe
-                  src={getYouTubeEmbedUrl(question.youtubeUrl)!}
-                  title="質問に関する動画"
-                  className="absolute inset-0 w-full h-full"
-                  loading="lazy"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
-              <a
-                href={question.youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center space-x-2 text-cyan-400 hover:text-yellow-400 transition-colors"
-              >
-                <span>YouTube で見る</span>
-                <span>↗</span>
-              </a>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 回答一覧 */}
-      {responses && responses.length > 0 && (
-        <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-          <h2 className="text-xl font-bold text-yellow-400 mb-6 amano-text-glow flex items-center">
-            💬 AI要約回答 ({responses.length}件)
-            <InfoTooltip text="議員からの質問（質問側の内容）と、それに対する市の担当部署からの回答（市側の回答）をAIが要約して表示しています。" />
-          </h2>
-          <div className="space-y-6">
+        {/* 回答一覧 */}
+        {responses && responses.length > 0 && (
+          <div className="ga-block ga-response-block">
+            <h2 className="flex items-center">
+              AI要約回答（{responses.length}件）
+              <InfoTooltip text="議員からの質問（質問側の内容）と、それに対する市の担当部署からの回答（市側の回答）をAIが要約して表示しています。" />
+            </h2>
             {responses.map((response, index) => (
-              <div
-                key={response._id}
-                className="amano-bg-glass p-4 rounded-lg animate-slideUp"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="flex items-center space-x-3 mb-3">
-                  <span className="text-2xl">🏛️</span>
-                  <div>
-                    <div className="font-medium text-gray-200">
-                      {response.respondentTitle || "回答者"}
-                    </div>
-                    {response.department && (
-                      <div className="text-sm text-gray-400">{response.department}</div>
-                    )}
-                  </div>
-                  <div className="ml-auto text-sm text-gray-400">
-                    📅 {new Date(response.responseDate).toLocaleDateString("ja-JP")}
-                  </div>
-                </div>
-                <div className="text-gray-200 leading-relaxed">
-                  {formatResponseContent(response.content)}
-                </div>
+              <div key={response._id} className="ga-qa-pair">
+                <span className="ga-num-badge">{String(index + 1).padStart(2, "0")}</span>
+                {formatResponseContent(response.content)}
               </div>
             ))}
           </div>
+        )}
+
+        {/* 気になるボタン */}
+        <div className="ga-block ga-surface-card ga-like-bar">
+          <button onClick={handleLike} className="ga-like-btn">
+            {question.isLiked ? "❤️" : "🤍"} 気になる（{question.likeCount}）
+          </button>
+          <span className="text-sm" style={{ color: "var(--ga-muted)" }}>この質問が気になったら押してみてください</span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

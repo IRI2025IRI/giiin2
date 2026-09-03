@@ -25,20 +25,20 @@ export function AdminPanel() {
   const isSuperAdmin = userRole === "superAdmin";
 
   const tabs = [
-    { id: "members", name: "議員管理", icon: "👥" },
-    { id: "questions", name: "質問管理", icon: "❓" },
-    { id: "news", name: "お知らせ管理", icon: "📢" },
-    { id: "images", name: "画像管理", icon: "🖼️" },
-    { id: "slideshow", name: "スライドショー", icon: "🎬" },
-    { id: "faq", name: "FAQ管理", icon: "💡" },
-    { id: "contact", name: "お問い合わせ", icon: "📧" },
-    { id: "menu", name: "メニュー設定", icon: "🔧" },
-    { id: "external", name: "外部記事管理", icon: "📰" },
+    { id: "members", name: "議員管理" },
+    { id: "questions", name: "質問管理" },
+    { id: "news", name: "お知らせ管理" },
+    { id: "images", name: "画像管理" },
+    { id: "slideshow", name: "スライドショー" },
+    { id: "faq", name: "FAQ管理" },
+    { id: "contact", name: "お問い合わせ" },
+    { id: "menu", name: "メニュー設定" },
+    { id: "external", name: "外部記事管理" },
     ...(isSuperAdmin ? [
-      { id: "users", name: "ユーザー管理", icon: "👤" },
-      { id: "statistics", name: "統計情報", icon: "📊" },
-      { id: "migration", name: "データ移行", icon: "🔄" },
-      { id: "cleanup", name: "データクリーンアップ", icon: "🧹" },
+      { id: "users", name: "ユーザー管理" },
+      { id: "statistics", name: "統計情報" },
+      { id: "migration", name: "データ移行" },
+      { id: "cleanup", name: "データクリーンアップ" },
     ] : []),
   ];
 
@@ -76,39 +76,32 @@ export function AdminPanel() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
-          🛠️ 管理パネル
-        </h1>
-        <div className="text-sm text-gray-400">
-          権限: {userRole === "superAdmin" ? "🔧 スーパー管理者" : "⚙️ 管理者"}
+    <div className="ga-page">
+      <div className="ga-main" style={{ paddingTop: "clamp(24px, 5vw, 40px)" }}>
+        <div className="ga-block flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-2xl font-bold" style={{ color: "var(--ga-ink)" }}>管理パネル</h1>
+          <div className="text-sm" style={{ color: "var(--ga-muted)" }}>
+            権限: {userRole === "superAdmin" ? "スーパー管理者" : "管理者"}
+          </div>
         </div>
-      </div>
 
-      {/* タブナビゲーション */}
-      <div className="amano-bg-card rounded-xl p-4 amano-crystal-border">
-        <div className="flex flex-wrap gap-2">
+        {/* タブナビゲーション */}
+        <div className="ga-block flex flex-wrap gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${
-                activeTab === tab.id
-                  ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105 amano-card-glow"
-                  : "text-gray-300 hover:bg-purple-800/30 hover:text-white"
-              }`}
+              className={activeTab === tab.id ? "ga-btn ga-btn-primary" : "ga-btn ga-btn-ghost"}
             >
-              <span>{tab.icon}</span>
-              <span>{tab.name}</span>
+              {tab.name}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* コンテンツエリア */}
-      <div className="min-h-[600px]">
-        {renderContent()}
+        {/* コンテンツエリア */}
+        <div className="ga-block ga-admin min-h-[600px]">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );

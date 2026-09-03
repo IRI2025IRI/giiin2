@@ -348,22 +348,33 @@ export const getStats = query({
   handler: async (ctx) => {
     const questions = await ctx.db.query("questions").collect();
     const responses = await ctx.db.query("responses").collect();
-    
+    const members = await ctx.db.query("councilMembers").collect();
+    const publishedNews = await ctx.db
+      .query("news")
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .collect();
+
     const totalQuestions = questions.length;
     const answeredQuestions = questions.filter(q => q.status === "answered").length;
     const totalResponses = responses.length;
-    
-    const categoryStats = questions.reduce((acc, question) => {
-      acc[question.category] = (acc[question.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
+
+    // オブジェクトのキーに日本語カテゴリー名を使うとConvexの戻り値バリデーションでエラーになるため、配列で返す
+    const categoryCounts = new Map<string, number>();
+    for (const question of questions) {
+      categoryCounts.set(question.category, (categoryCounts.get(question.category) || 0) + 1);
+    }
+    const categoryStats = Array.from(categoryCounts.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count);
+
     return {
       totalQuestions,
       answeredQuestions,
       totalResponses,
       answerRate: totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0,
       categoryStats,
+      totalMembers: members.filter(m => m.isActive).length,
+      noticesCount: publishedNews.length,
     };
   },
 });

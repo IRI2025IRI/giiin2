@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { Slideshow } from "./Slideshow";
+import { useCountUp, useReveal } from "../hooks/useGaAnimations";
 
 import { TopMembers } from "./TopMembers";
 import { RecentQuestions } from "./RecentQuestions";
@@ -15,34 +15,17 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onMemberClick, onNewsClick, onViewChange, onQuestionClick }: DashboardProps) {
-  const [currentTime, setCurrentTime] = useState(new Date());
-
   const recentNews = useQuery(api.news.getRecent, { limit: 3 });
+  const stats = useQuery(api.questions.getStats);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+  const totalQuestions = useCountUp(stats?.totalQuestions, 0);
+  const totalMembers = useCountUp(stats?.totalMembers, 100);
+  const answerRate = useCountUp(stats?.answerRate, 200);
+  const noticesCount = useCountUp(stats?.noticesCount, 300);
 
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    });
-  };
+  const quickAccess = useReveal<HTMLDivElement>();
+  const newsReveal = useReveal<HTMLDivElement>();
+  const guideReveal = useReveal<HTMLDivElement>();
 
   const handleQuestionClick = (questionId: Id<"questions">) => {
     if (onQuestionClick) {
@@ -54,139 +37,165 @@ export function Dashboard({ onMemberClick, onNewsClick, onViewChange, onQuestion
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* スライドショー with タイトルオーバーレイ */}
-      <div className="relative">
-        <Slideshow />
-        
-        {/* タイトルオーバーレイ */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center space-y-4 animate-amano-float">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow drop-shadow-2xl">
-              ようこそGIIIN/ギイーンへ
-            </h1>
-            {/* 現在時刻 */}
+    <div className="ga-page">
+      {/* ヒーロー：見出し＋実績サマリー */}
+      <div className="ga-hero">
+        <div className="ga-hero-bignum">01</div>
+        <div className="ga-hero-inner">
+          <div className="ga-hero-eyebrow">
+            <span className="ga-rule" />
+            <span className="ga-eyebrow">三原市議会 見える化プロジェクト</span>
+          </div>
+          <h1>
+            議員活動を、<br className="sm:hidden" />もっと身近に。
+          </h1>
+          <p>
+            質問・回答、議員情報、統計データを通じて、三原市議会の動きをわかりやすくお届けします。
+          </p>
+        </div>
 
+        <div className="ga-stat-row">
+          <div className="ga-stat">
+            <div className="ga-eyebrow">総質問数</div>
+            <div className="ga-value">{stats ? totalQuestions : "–"}</div>
+          </div>
+          <div className="ga-stat">
+            <div className="ga-eyebrow">議員数</div>
+            <div className="ga-value">{stats ? totalMembers : "–"}</div>
+          </div>
+          <div className="ga-stat">
+            <div className="ga-eyebrow">回答率</div>
+            <div className="ga-value">{stats ? `${answerRate}%` : "–"}</div>
+          </div>
+          <div className="ga-stat">
+            <div className="ga-eyebrow">お知らせ</div>
+            <div className="ga-value">{stats ? noticesCount : "–"}</div>
           </div>
         </div>
       </div>
 
-      {/* クイックアクセス */}
-      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-        <h2 className="text-xl font-bold text-yellow-400 mb-6 amano-text-glow text-center">
-          🚀 クイックアクセス
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <button
-            onClick={() => onViewChange("questions")}
-            className="amano-bg-glass p-4 rounded-lg text-center hover:bg-gradient-to-r hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 group"
-          >
-            <div className="text-3xl mb-2 group-hover:animate-bounce">❓</div>
-            <div className="text-sm font-medium text-gray-200 group-hover:text-white">質問・回答</div>
-          </button>
-          <button
-            onClick={() => onViewChange("members")}
-            className="amano-bg-glass p-4 rounded-lg text-center hover:bg-gradient-to-r hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 group"
-          >
-            <div className="text-3xl mb-2 group-hover:animate-bounce">👥</div>
-            <div className="text-sm font-medium text-gray-200 group-hover:text-white">議員一覧</div>
-          </button>
-          <button
-            onClick={() => onViewChange("rankings")}
-            className="amano-bg-glass p-4 rounded-lg text-center hover:bg-gradient-to-r hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 group"
-          >
-            <div className="text-3xl mb-2 group-hover:animate-bounce">📊</div>
-            <div className="text-sm font-medium text-gray-200 group-hover:text-white">統計</div>
-          </button>
-          <button
-            onClick={() => onViewChange("news")}
-            className="amano-bg-glass p-4 rounded-lg text-center hover:bg-gradient-to-r hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 group"
-          >
-            <div className="text-3xl mb-2 group-hover:animate-bounce">📢</div>
-            <div className="text-sm font-medium text-gray-200 group-hover:text-white">お知らせ</div>
-          </button>
+      <div className="ga-main">
+        {/* スライドショー */}
+        <div className="ga-block" style={{ borderRadius: 16, overflow: "hidden", boxShadow: "var(--ga-shadow)" }}>
+          <Slideshow />
         </div>
-      </div>
 
-      {/* メインコンテンツ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 質問数の多い議員 */}
-        <TopMembers onMemberClick={onMemberClick} />
-
-        {/* 最近の質問 */}
-        <RecentQuestions onQuestionClick={handleQuestionClick} />
-      </div>
-
-      {/* 最新お知らせ */}
-      {recentNews && recentNews.length > 0 && (
-        <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-yellow-400 amano-text-glow">
-              📢 最新お知らせ
-            </h2>
-            <button
-              onClick={() => onViewChange("news")}
-              className="text-sm text-cyan-400 hover:text-yellow-400 transition-colors"
-            >
-              すべて見る →
-            </button>
+        {/* クイックアクセス */}
+        <div ref={quickAccess.ref} className={`ga-block ${quickAccess.className}`}>
+          <div className="ga-section-head">
+            <span className="ga-bignum">02</span>
+            <div className="ga-headline">
+              <span className="ga-eyebrow">Quick Access</span>
+              <h2>クイックアクセス</h2>
+            </div>
           </div>
-          <div className="space-y-4">
-            {recentNews.map((news, index) => (
-              <div
-                key={news._id}
-                onClick={() => onNewsClick(news._id)}
-                className="cursor-pointer p-4 amano-bg-glass rounded-lg hover:bg-gradient-to-r hover:from-yellow-500/20 hover:via-purple-500/20 hover:to-cyan-400/20 transition-all duration-300 transform hover:scale-[1.02] animate-slideUp"
-                style={{ animationDelay: `${index * 100}ms` }}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { key: "questions", label: "質問・回答" },
+              { key: "members", label: "議員一覧" },
+              { key: "rankings", label: "統計" },
+              { key: "news", label: "お知らせ" },
+            ].map((item, index) => (
+              <button
+                key={item.key}
+                onClick={() => onViewChange(item.key)}
+                className="ga-surface-card text-center transition-transform duration-300 hover:-translate-y-1"
               >
-                <div className="flex items-start space-x-3">
-                  <span className="text-2xl">📢</span>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-200 hover:text-yellow-400 transition-colors">
-                      {news.title}
-                    </h3>
-                    <div className="flex items-center space-x-4 mt-2 text-sm text-gray-400">
-                      <span>📅 {new Date(news.publishDate).toLocaleDateString("ja-JP")}</span>
-                      <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-0.5 rounded-full text-xs">
-                        {news.category}
-                      </span>
-                    </div>
-                  </div>
+                <div className="ga-jf" style={{ fontSize: "1.5rem", fontWeight: 300, color: "var(--ga-gold)" }}>
+                  {String(index + 1).padStart(2, "0")}
                 </div>
-              </div>
+                <div className="text-sm font-medium mt-1" style={{ color: "var(--ga-ink)" }}>{item.label}</div>
+              </button>
             ))}
           </div>
         </div>
-      )}
 
-      {/* 統計情報 */}
+        {/* 質問数の多い議員 */}
+        <div className="ga-block">
+          <div className="ga-section-head">
+            <span className="ga-bignum">03</span>
+            <div className="ga-headline">
+              <span className="ga-eyebrow">Ranking</span>
+              <h2>質問数の多い議員</h2>
+            </div>
+            <button className="ga-link" onClick={() => onViewChange("rankings")}>
+              すべて見る →
+            </button>
+          </div>
+          <TopMembers onMemberClick={onMemberClick} />
+        </div>
 
-      {/* 使い方ガイド */}
-      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-        <h2 className="text-xl font-bold text-yellow-400 mb-6 amano-text-glow text-center">
-          📖 使い方ガイド
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-4xl mb-4">🔍</div>
-            <h3 className="font-bold text-gray-200 mb-2">1. 検索</h3>
-            <p className="text-sm text-gray-400">
-              議員名やキーワードで質問を簡単に検索できます
-            </p>
+        {/* 最近の質問 */}
+        <div className="ga-block">
+          <div className="ga-section-head">
+            <span className="ga-bignum">04</span>
+            <div className="ga-headline">
+              <span className="ga-eyebrow">Latest Q&amp;A</span>
+              <h2>最近の質問</h2>
+            </div>
+            <button className="ga-link" onClick={() => onViewChange("questions")}>
+              すべて見る →
+            </button>
           </div>
-          <div className="text-center">
-            <div className="text-4xl mb-4">📊</div>
-            <h3 className="font-bold text-gray-200 mb-2">2. 分析</h3>
-            <p className="text-sm text-gray-400">
-              議員の活動状況を確認できます
-            </p>
+          <RecentQuestions onQuestionClick={handleQuestionClick} />
+        </div>
+
+        {/* 最新お知らせ */}
+        {recentNews && recentNews.length > 0 && (
+          <div ref={newsReveal.ref} className={`ga-block ${newsReveal.className}`}>
+            <div className="ga-section-head">
+              <span className="ga-bignum">05</span>
+              <div className="ga-headline">
+                <span className="ga-eyebrow">News</span>
+                <h2>最新お知らせ</h2>
+              </div>
+              <button className="ga-link" onClick={() => onViewChange("news")}>
+                すべて見る →
+              </button>
+            </div>
+            <div className="flex flex-col gap-3">
+              {recentNews.map((news) => (
+                <div
+                  key={news._id}
+                  onClick={() => onNewsClick(news._id)}
+                  className="ga-surface-card cursor-pointer transition-transform duration-200 hover:-translate-y-0.5"
+                >
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold" style={{ color: "var(--ga-ink)" }}>{news.title}</h3>
+                    <div className="flex items-center gap-3 mt-2 text-xs" style={{ color: "var(--ga-muted)" }}>
+                      <span>{new Date(news.publishDate).toLocaleDateString("ja-JP")}</span>
+                      <span className="ga-pill cat">{news.category}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-4xl mb-4">💬</div>
-            <h3 className="font-bold text-gray-200 mb-2">3. 参加</h3>
-            <p className="text-sm text-gray-400">
-              気になる機能で関心のある質問を評価できます
-            </p>
+        )}
+
+        {/* 使い方ガイド */}
+        <div ref={guideReveal.ref} className={`ga-block ${guideReveal.className}`}>
+          <div className="ga-section-head">
+            <span className="ga-bignum">06</span>
+            <div className="ga-headline">
+              <span className="ga-eyebrow">Guide</span>
+              <h2>使い方ガイド</h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { title: "検索", body: "議員名やキーワードで質問を簡単に検索できます" },
+              { title: "分析", body: "議員の活動状況を確認できます" },
+              { title: "参加", body: "気になる機能で関心のある質問を評価できます" },
+            ].map((step, index) => (
+              <div key={step.title} className="ga-surface-card text-center">
+                <div className="ga-jf" style={{ fontSize: "2rem", fontWeight: 300, color: "var(--ga-gold)" }}>
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+                <h3 className="font-bold mt-1 mb-2">{step.title}</h3>
+                <p className="text-sm" style={{ color: "var(--ga-muted)" }}>{step.body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

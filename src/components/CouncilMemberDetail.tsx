@@ -13,7 +13,7 @@ interface CouncilMemberDetailProps {
 
 export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: CouncilMemberDetailProps) {
   const [activeTab, setActiveTab] = useState("profile");
-  
+
   const member = useQuery(api.councilMembers.get, { id: memberId });
   const memberStats = useQuery(api.councilMembers.getStats, { memberId });
   const memberQuestions = useQuery(api.questions.list, { councilMemberId: memberId });
@@ -47,18 +47,25 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-300">読み込み中...</p>
+          <div className="ga-spinner mb-4"></div>
+          <p style={{ color: "var(--ga-muted)" }}>読み込み中...</p>
         </div>
       </div>
     );
   }
 
   const tabs = [
-    { id: "profile", name: "プロフィール", icon: "👤" },
-    { id: "questions", name: "質問一覧", icon: "❓" },
-    { id: "stats", name: "統計", icon: "📊" },
+    { id: "profile", name: "プロフィール" },
+    { id: "questions", name: "質問一覧" },
+    { id: "stats", name: "統計" },
   ];
+
+  const infoRow = (label: string, value: React.ReactNode) => (
+    <div className="flex justify-between">
+      <span style={{ color: "var(--ga-muted)" }}>{label}:</span>
+      <span style={{ color: "var(--ga-ink)" }}>{value}</span>
+    </div>
+  );
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -68,75 +75,31 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
             {/* 基本情報 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-bold text-yellow-400 mb-4 amano-text-glow">
-                  📋 基本情報
-                </h3>
+                <h3 className="text-lg font-bold mb-4" style={{ color: "var(--ga-ink)" }}>基本情報</h3>
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">氏名:</span>
-                    <span className="text-gray-200">{member.name}</span>
-                  </div>
-                  {member.party && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">会派:</span>
-                      <span className="text-gray-200">{member.party}</span>
-                    </div>
-                  )}
-                  {member.position && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">役職:</span>
-                      <span className="text-gray-200">{member.position}</span>
-                    </div>
-                  )}
-                  {member.electionCount && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">当選回数:</span>
-                      <span className="text-gray-200">{member.electionCount}回</span>
-                    </div>
-                  )}
-                  {member.committee && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">委員会:</span>
-                      <span className="text-gray-200">{member.committee}</span>
-                    </div>
-                  )}
+                  {infoRow("氏名", member.name)}
+                  {member.party && infoRow("会派", member.party)}
+                  {member.position && infoRow("役職", member.position)}
+                  {member.electionCount && infoRow("当選回数", `${member.electionCount}回`)}
+                  {member.committee && infoRow("委員会", member.committee)}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-yellow-400 mb-4 amano-text-glow">
-                  📞 連絡先
-                </h3>
+                <h3 className="text-lg font-bold mb-4" style={{ color: "var(--ga-ink)" }}>連絡先</h3>
                 <div className="space-y-3 text-sm">
-                  {member.phone && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">電話:</span>
-                      <span className="text-gray-200">{member.phone}</span>
-                    </div>
+                  {member.phone && infoRow("電話", member.phone)}
+                  {member.email && infoRow(
+                    "メール",
+                    <a href={`mailto:${member.email}`} style={{ color: "var(--ga-teal-deep)" }}>{member.email}</a>
                   )}
-                  {member.email && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">メール:</span>
-                      <a href={`mailto:${member.email}`} className="text-cyan-400 hover:text-yellow-400 transition-colors">
-                        {member.email}
-                      </a>
-                    </div>
+                  {member.website && infoRow(
+                    "ウェブサイト",
+                    <a href={member.website} target="_blank" rel="noopener noreferrer" style={{ color: "var(--ga-teal-deep)" }}>公式サイト</a>
                   )}
-                  {member.website && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">ウェブサイト:</span>
-                      <a href={member.website} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-yellow-400 transition-colors">
-                        公式サイト
-                      </a>
-                    </div>
-                  )}
-                  {member.blogUrl && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">ブログ:</span>
-                      <a href={member.blogUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-yellow-400 transition-colors">
-                        ブログ
-                      </a>
-                    </div>
+                  {member.blogUrl && infoRow(
+                    "ブログ",
+                    <a href={member.blogUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--ga-teal-deep)" }}>ブログ</a>
                   )}
                 </div>
               </div>
@@ -145,11 +108,9 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
             {/* 経歴・プロフィール */}
             {member.bio && (
               <div>
-                <h3 className="text-lg font-bold text-yellow-400 mb-4 amano-text-glow">
-                  📖 経歴・プロフィール
-                </h3>
-                <div className="amano-bg-glass p-4 rounded-lg">
-                  <p className="text-gray-200 whitespace-pre-wrap">{member.bio}</p>
+                <h3 className="text-lg font-bold mb-4" style={{ color: "var(--ga-ink)" }}>経歴・プロフィール</h3>
+                <div className="p-4 rounded-lg" style={{ background: "var(--ga-paper)", border: "1px solid var(--ga-line)" }}>
+                  <p className="whitespace-pre-wrap" style={{ color: "var(--ga-muted)" }}>{member.bio}</p>
                 </div>
               </div>
             )}
@@ -157,11 +118,9 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
             {/* 備考 */}
             {member.notes && (
               <div>
-                <h3 className="text-lg font-bold text-yellow-400 mb-4 amano-text-glow">
-                  📝 備考
-                </h3>
-                <div className="amano-bg-glass p-4 rounded-lg">
-                  <p className="text-gray-200 whitespace-pre-wrap">{member.notes}</p>
+                <h3 className="text-lg font-bold mb-4" style={{ color: "var(--ga-ink)" }}>備考</h3>
+                <div className="p-4 rounded-lg" style={{ background: "var(--ga-paper)", border: "1px solid var(--ga-line)" }}>
+                  <p className="whitespace-pre-wrap" style={{ color: "var(--ga-muted)" }}>{member.notes}</p>
                 </div>
               </div>
             )}
@@ -171,28 +130,22 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
       case "questions":
         return (
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-yellow-400 amano-text-glow">
-              ❓ 質問一覧 ({memberQuestions?.length || 0}件)
+            <h3 className="text-lg font-bold" style={{ color: "var(--ga-ink)" }}>
+              質問一覧 ({memberQuestions?.length || 0}件)
             </h3>
             {memberQuestions && memberQuestions.length > 0 ? (
               <div className="space-y-4">
-                {memberQuestions.map((question, index) => (
-                  <div
+                {memberQuestions.map((question) => (
+                  <QuestionCard
                     key={question._id}
-                    className="animate-slideUp"
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    <QuestionCard
-                      question={question}
-                      onClick={() => onQuestionClick(question._id)}
-                    />
-                  </div>
+                    question={question}
+                    onClick={() => onQuestionClick(question._id)}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 amano-bg-glass rounded-lg">
-                <div className="text-4xl mb-4">❓</div>
-                <p className="text-gray-400">まだ質問がありません</p>
+              <div className="ga-empty">
+                <p>まだ質問がありません</p>
               </div>
             )}
           </div>
@@ -201,55 +154,58 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
       case "stats":
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-bold text-yellow-400 amano-text-glow">
-              📊 活動統計
-            </h3>
+            <h3 className="text-lg font-bold" style={{ color: "var(--ga-ink)" }}>活動統計</h3>
             {memberStats ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="amano-bg-glass p-6 rounded-lg text-center">
-                  <div className="text-3xl mb-2">❓</div>
-                  <div className="text-2xl font-bold text-yellow-400">{memberStats.totalQuestions}</div>
-                  <div className="text-sm text-gray-300">総質問数</div>
+                <div className="ga-surface-card text-center">
+                  <div className="ga-jf" style={{ fontSize: "2rem", fontWeight: 300, color: "var(--ga-teal-deep)" }}>
+                    {memberStats.totalQuestions}
+                  </div>
+                  <div className="text-sm mt-1" style={{ color: "var(--ga-muted)" }}>総質問数</div>
                 </div>
-                <div className="amano-bg-glass p-6 rounded-lg text-center">
-                  <div className="text-3xl mb-2">📅</div>
-                  <div className="text-2xl font-bold text-purple-400">{memberStats.questionsThisYear}</div>
-                  <div className="text-sm text-gray-300">今年の質問数</div>
+                <div className="ga-surface-card text-center">
+                  <div className="ga-jf" style={{ fontSize: "2rem", fontWeight: 300, color: "var(--ga-teal-deep)" }}>
+                    {memberStats.questionsThisYear}
+                  </div>
+                  <div className="text-sm mt-1" style={{ color: "var(--ga-muted)" }}>今年の質問数</div>
                 </div>
-                <div className="amano-bg-glass p-6 rounded-lg text-center">
-                  <div className="text-3xl mb-2">🤔</div>
-                  <div className="text-2xl font-bold text-cyan-400">{memberStats.totalLikes}</div>
-                  <div className="text-sm text-gray-300">気になる数</div>
+                <div className="ga-surface-card text-center">
+                  <div className="ga-jf" style={{ fontSize: "2rem", fontWeight: 300, color: "var(--ga-teal-deep)" }}>
+                    {memberStats.totalLikes}
+                  </div>
+                  <div className="text-sm mt-1" style={{ color: "var(--ga-muted)" }}>気になる数</div>
                 </div>
               </div>
             ) : (
               <div className="text-center py-8">
-                <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-300">統計を読み込み中...</p>
+                <div className="ga-spinner mb-4"></div>
+                <p style={{ color: "var(--ga-muted)" }}>統計を読み込み中...</p>
               </div>
             )}
 
             {/* カテゴリー別統計 */}
             {memberStats && memberStats.categories.length > 0 && (
               <div>
-                <h4 className="text-md font-bold text-yellow-400 mb-4 amano-text-glow">
-                  📈 カテゴリー別質問数
-                </h4>
+                <h4 className="text-md font-bold mb-4" style={{ color: "var(--ga-ink)" }}>カテゴリー別質問数</h4>
                 <div className="space-y-2">
-                  {memberStats.categories.map((category, index) => (
-                    <div key={category.name} className="flex items-center justify-between p-3 amano-bg-glass rounded-lg">
-                      <span className="text-gray-200">{category.name}</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-20 bg-gray-700 rounded-full h-2">
+                  {memberStats.categories.map((category) => (
+                    <div
+                      key={category.name}
+                      className="flex items-center justify-between p-3 rounded-lg"
+                      style={{ background: "var(--ga-paper)", border: "1px solid var(--ga-line)" }}
+                    >
+                      <span style={{ color: "var(--ga-ink)" }}>{category.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 rounded-full h-2" style={{ background: "var(--ga-line)" }}>
                           <div
-                            className="bg-gradient-to-r from-yellow-400 to-purple-400 h-2 rounded-full transition-all duration-1000"
+                            className="h-2 rounded-full"
                             style={{
                               width: `${(category.count / Math.max(...memberStats.categories.map(c => c.count))) * 100}%`,
-                              animationDelay: `${index * 100}ms`
+                              background: "var(--ga-gold)",
                             }}
                           />
                         </div>
-                        <span className="text-yellow-400 font-bold min-w-[2rem] text-right">{category.count}</span>
+                        <span className="font-bold min-w-[2rem] text-right" style={{ color: "var(--ga-teal-deep)" }}>{category.count}</span>
                       </div>
                     </div>
                   ))}
@@ -265,83 +221,58 @@ export function CouncilMemberDetail({ memberId, onBack, onQuestionClick }: Counc
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* 戻るボタン */}
-      <button
-        onClick={onBack}
-        className="flex items-center space-x-2 text-gray-300 hover:text-yellow-400 transition-colors"
-      >
-        <span>←</span>
-        <span>議員一覧に戻る</span>
-      </button>
+    <div className="ga-page">
+      <div className="ga-main" style={{ paddingTop: "clamp(24px, 5vw, 40px)" }}>
+        {/* 戻るボタン */}
+        <button onClick={onBack} className="ga-btn ga-btn-ghost ga-block">
+          ← 議員一覧に戻る
+        </button>
 
-      {/* ヘッダー */}
-      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-        <div className="flex items-start space-x-6">
-          {/* 写真 */}
-          <div className="flex-shrink-0">
-            {member.photoUrl ? (
-              <img
-                src={member.photoUrl}
-                alt={member.name}
-                className="w-24 h-24 rounded-full object-cover border-4 border-purple-400/30"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-4xl border-4 border-purple-400/30">
-                👤
-              </div>
-            )}
-          </div>
-
-          {/* 基本情報 */}
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-yellow-400 mb-2 amano-text-glow">
-              {member.name}
-            </h1>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {member.party && (
-                <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-sm">
-                  {member.party}
-                </span>
-              )}
-              {member.position && (
-                <span className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-sm">
-                  {member.position}
-                </span>
-              )}
+        {/* ヘッダー */}
+        <div className="ga-block ga-surface-card">
+          <div className="flex items-start gap-4 sm:gap-6">
+            {/* 写真 */}
+            <div
+              className="ga-avatar flex-shrink-0"
+              style={{ width: "clamp(56px, 18vw, 96px)", height: "clamp(56px, 18vw, 96px)", fontSize: "clamp(1.1rem, 4vw, 2rem)" }}
+            >
+              {member.photoUrl ? <img src={member.photoUrl} alt={member.name} /> : member.name.charAt(0)}
             </div>
-            <div className="text-gray-300 text-sm">
-              <p>任期: {new Date(member.termStart).toLocaleDateString("ja-JP")} 〜 
-                {member.termEnd ? new Date(member.termEnd).toLocaleDateString("ja-JP") : "現在"}
-              </p>
+
+            {/* 基本情報 */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: "var(--ga-ink)" }}>{member.name}</h1>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {member.party && <span className="ga-tag neutral">{member.party}</span>}
+                {member.position && <span className="ga-tag accent">{member.position}</span>}
+              </div>
+              <div className="text-sm" style={{ color: "var(--ga-muted)" }}>
+                <p>
+                  任期: {new Date(member.termStart).toLocaleDateString("ja-JP")} 〜{" "}
+                  {member.termEnd ? new Date(member.termEnd).toLocaleDateString("ja-JP") : "現在"}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* タブナビゲーション */}
-      <div className="amano-bg-card rounded-xl p-4 amano-crystal-border">
-        <div className="flex space-x-2">
+        {/* タブナビゲーション */}
+        <div className="ga-block flex gap-2 flex-wrap">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
-                activeTab === tab.id
-                  ? "bg-gradient-to-r from-yellow-500 via-purple-500 to-cyan-400 text-white shadow-lg transform scale-105"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white"
-              }`}
+              className={activeTab === tab.id ? "ga-btn ga-btn-primary" : "ga-btn ga-btn-ghost"}
             >
-              <span>{tab.icon}</span>
-              <span>{tab.name}</span>
+              {tab.name}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* タブコンテンツ */}
-      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-        {renderTabContent()}
+        {/* タブコンテンツ */}
+        <div className="ga-block ga-surface-card">
+          {renderTabContent()}
+        </div>
       </div>
     </div>
   );

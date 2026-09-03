@@ -25,75 +25,62 @@ export function CouncilMemberCard({ member, onClick }: CouncilMemberCardProps) {
     <a
       href={`?view=memberDetail&member=${member._id}`}
       onClick={handleClick}
-      className="block bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer group overflow-hidden"
+      className="block ga-surface-card overflow-hidden transition-transform duration-300 hover:-translate-y-1"
+      style={{ padding: 0 }}
     >
       {/* Photo Section */}
-      <div className="relative h-32 sm:h-40 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+      <div
+        className="relative h-32 sm:h-40 flex items-center justify-center"
+        style={{ background: "linear-gradient(135deg, var(--ga-teal-soft), var(--ga-gold-soft))" }}
+      >
         {(member.memberPhotoUrl || member.photoUrl) ? (
           <img
             src={member.memberPhotoUrl || member.photoUrl}
             alt={member.name}
-            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-full object-contain"
           />
         ) : (
-          <div className="text-4xl sm:text-6xl text-gray-400">👤</div>
+          <div className="ga-jf" style={{ fontSize: "2rem", color: "var(--ga-teal)" }}>
+            {member.name.charAt(0)}
+          </div>
         )}
         {member.isActive && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-            現職
-          </div>
+          <div className="absolute top-2 right-2 ga-tag neutral">現職</div>
         )}
       </div>
 
       {/* Content Section */}
       <div className="p-4 sm:p-6">
         <div className="mb-3">
-          <h3 className="text-lg sm:text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors mb-1">
+          <h3 className="text-lg sm:text-xl font-bold mb-1" style={{ color: "var(--ga-ink)" }}>
             {member.name}
           </h3>
           {member.politicalParty && (
-            <p className="text-xs sm:text-sm text-gray-600 mb-2">{member.politicalParty}</p>
+            <p className="text-xs sm:text-sm mb-2" style={{ color: "var(--ga-muted)" }}>{member.politicalParty}</p>
           )}
           {member.position && (
-            <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-              {member.position}
-            </span>
+            <span className="ga-pill cat">{member.position}</span>
           )}
         </div>
 
         {/* Stats */}
-        <div className="flex justify-between items-center text-xs sm:text-sm text-gray-500 mb-3">
+        <div className="flex justify-between items-center text-xs sm:text-sm mb-3" style={{ color: "var(--ga-muted)" }}>
           <span>当選回数: {member.electionCount || 0}回</span>
           <span>任期: {new Date(member.termStart).getFullYear()}年〜</span>
         </div>
 
         {/* Bio Preview */}
         {member.bio && (
-          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-3">
+          <p className="text-xs sm:text-sm line-clamp-2 mb-3" style={{ color: "var(--ga-muted)" }}>
             {member.bio}
           </p>
         )}
 
         {/* Contact Info */}
-        <div className="flex flex-wrap gap-2">
-          {member.email && (
-            <div className="flex items-center text-xs text-gray-500">
-              <span className="mr-1">📧</span>
-              <span className="truncate max-w-24">メール</span>
-            </div>
-          )}
-          {member.phone && (
-            <div className="flex items-center text-xs text-gray-500">
-              <span className="mr-1">📞</span>
-              <span>電話</span>
-            </div>
-          )}
-          {member.website && (
-            <div className="flex items-center text-xs text-gray-500">
-              <span className="mr-1">🌐</span>
-              <span>サイト</span>
-            </div>
-          )}
+        <div className="flex flex-wrap gap-3 text-xs" style={{ color: "var(--ga-muted)" }}>
+          {member.email && <span>メール</span>}
+          {member.phone && <span>電話</span>}
+          {member.website && <span>サイト</span>}
         </div>
       </div>
     </a>

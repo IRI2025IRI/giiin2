@@ -16,7 +16,7 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
   const [selectedSessionNumber, setSelectedSessionNumber] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // 検索実行用の状態
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -87,8 +87,8 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-300">読み込み中...</p>
+          <div className="ga-spinner mb-4"></div>
+          <p style={{ color: "var(--ga-muted)" }}>読み込み中...</p>
         </div>
       </div>
     );
@@ -101,190 +101,163 @@ export function QuestionsList({ onQuestionClick }: QuestionsListProps) {
     : results;
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* ヘッダー */}
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent amano-text-glow">
-          ❓ 議会質問・回答
-        </h1>
-        <p className="text-gray-300">
-          三原市議会での質問と回答を検索・閲覧できます
-        </p>
+    <div className="ga-page">
+      <div className="ga-page-header">
+        <h1>議会質問・回答</h1>
+        <p>三原市議会での質問と回答を検索・閲覧できます</p>
       </div>
 
-      {/* 検索・フィルター */}
-      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-        {/* 検索バー */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="質問のタイトルや内容で検索..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="auth-input-field w-full"
-          />
-        </div>
-
-        {/* フィルター切り替えボタン */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-yellow-400 amano-text-glow">
-            🔍 フィルター
-          </h3>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors flex items-center space-x-2"
-          >
-            <span>{showFilters ? "閉じる" : "開く"}</span>
-            <span className={`transform transition-transform ${showFilters ? "rotate-180" : ""}`}>
-              ▼
-            </span>
-          </button>
-        </div>
-
-        {/* フィルター内容 */}
-        {showFilters && (
-          <div className="space-y-4 animate-slideDown">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* カテゴリー */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  カテゴリー
-                </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="auth-input-field text-sm"
-                >
-                  <option value="all">すべて</option>
-                  {categories?.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 議員 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  議員
-                </label>
-                <select
-                  value={selectedMember || ""}
-                  onChange={(e) => setSelectedMember(e.target.value ? e.target.value as Id<"councilMembers"> : null)}
-                  className="auth-input-field text-sm"
-                >
-                  <option value="">すべて</option>
-                  {councilMembers?.map((member) => (
-                    <option key={member._id} value={member._id}>
-                      {member.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 会議番号 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
-                  会議番号
-                  <InfoTooltip text="質問が行われた市議会の会期（定例会・臨時会）を表します。「令和6年第3回定例会」のように表記されます。" />
-                </label>
-                <select
-                  value={selectedSessionNumber}
-                  onChange={(e) => setSelectedSessionNumber(e.target.value)}
-                  className="auth-input-field text-sm"
-                >
-                  <option value="all">すべて</option>
-                  {sessionNumbers?.map((sessionNumber) => (
-                    <option key={sessionNumber} value={sessionNumber}>
-                      {sessionNumber}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* ソート */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  並び順
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="auth-input-field text-sm"
-                >
-                  <option value="newest">新しい順</option>
-                  <option value="oldest">古い順</option>
-                  <option value="title">タイトル順</option>
-                </select>
-              </div>
-            </div>
-
-            {/* 検索実行・リセットボタン */}
-            <div className="flex space-x-4">
-              <button
-                onClick={handleSearch}
-                className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 amano-glow"
-              >
-                🔍 検索実行
-              </button>
-              <button
-                onClick={handleReset}
-                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                リセット
-              </button>
-            </div>
+      <div className="ga-main">
+        {/* 検索・フィルター */}
+        <div className="ga-block ga-surface-card">
+          {/* 検索バー */}
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="質問のタイトルや内容で検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="ga-input"
+            />
           </div>
-        )}
-      </div>
 
-      {/* 結果表示 */}
-      <div className="amano-bg-card rounded-xl p-6 amano-crystal-border">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-yellow-400 amano-text-glow">
-            📋 質問一覧
-          </h2>
-          <div className="text-sm text-gray-400">
-            {filteredQuestions.length}件の質問
+          {/* フィルター切り替えボタン */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold" style={{ color: "var(--ga-ink)" }}>フィルター</h3>
+            <button onClick={() => setShowFilters(!showFilters)} className="ga-btn ga-btn-ghost">
+              <span>{showFilters ? "閉じる" : "開く"}</span>
+              <span className={`transform transition-transform ${showFilters ? "rotate-180" : ""}`}>▾</span>
+            </button>
           </div>
-        </div>
 
-        {filteredQuestions.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-6xl mb-4">🔍</div>
-            <p className="text-gray-400 text-lg">該当する質問が見つかりませんでした</p>
-            <p className="text-gray-500 text-sm mt-2">検索条件を変更してお試しください</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredQuestions.map((question) => (
-              <QuestionCard
-                key={question._id}
-                question={question}
-                onClick={() => onQuestionClick(question._id)}
-              />
-            ))}
-            
-            {/* もっと読み込むボタン（タイトル順は全件取得済みのため対象外） */}
-            {!isTitleSort && status === "CanLoadMore" && (
-              <div className="text-center pt-6">
-                <button
-                  onClick={() => loadMore(20)}
-                  className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                >
-                  さらに読み込む
+          {/* フィルター内容 */}
+          {showFilters && (
+            <div className="space-y-4 animate-slideDown">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* カテゴリー */}
+                <div className="ga-field">
+                  <label>カテゴリー</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="ga-select"
+                  >
+                    <option value="all">すべて</option>
+                    {categories?.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 議員 */}
+                <div className="ga-field">
+                  <label>議員</label>
+                  <select
+                    value={selectedMember || ""}
+                    onChange={(e) => setSelectedMember(e.target.value ? e.target.value as Id<"councilMembers"> : null)}
+                    className="ga-select"
+                  >
+                    <option value="">すべて</option>
+                    {councilMembers?.map((member) => (
+                      <option key={member._id} value={member._id}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 会議番号 */}
+                <div className="ga-field">
+                  <label>
+                    会議番号
+                    <InfoTooltip text="質問が行われた市議会の会期（定例会・臨時会）を表します。「令和6年第3回定例会」のように表記されます。" />
+                  </label>
+                  <select
+                    value={selectedSessionNumber}
+                    onChange={(e) => setSelectedSessionNumber(e.target.value)}
+                    className="ga-select"
+                  >
+                    <option value="all">すべて</option>
+                    {sessionNumbers?.map((sessionNumber) => (
+                      <option key={sessionNumber} value={sessionNumber}>
+                        {sessionNumber}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* ソート */}
+                <div className="ga-field">
+                  <label>並び順</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="ga-select"
+                  >
+                    <option value="newest">新しい順</option>
+                    <option value="oldest">古い順</option>
+                    <option value="title">タイトル順</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 検索実行・リセットボタン */}
+              <div className="flex gap-4">
+                <button onClick={handleSearch} className="ga-btn ga-btn-primary flex-1">
+                  検索実行
+                </button>
+                <button onClick={handleReset} className="ga-btn ga-btn-ghost">
+                  リセット
                 </button>
               </div>
-            )}
+            </div>
+          )}
+        </div>
 
-            {!isTitleSort && status === "LoadingMore" && (
-              <div className="text-center py-4">
-                <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              </div>
-            )}
+        {/* 結果表示 */}
+        <div className="ga-block">
+          <div className="ga-section-head">
+            <div className="ga-headline">
+              <span className="ga-eyebrow">Results</span>
+              <h2>質問一覧</h2>
+            </div>
+            <span className="text-sm" style={{ color: "var(--ga-muted)" }}>{filteredQuestions.length}件の質問</span>
           </div>
-        )}
+
+          {filteredQuestions.length === 0 ? (
+            <div className="ga-empty">
+              <p className="text-lg">該当する質問が見つかりませんでした</p>
+              <p className="text-sm mt-2">検索条件を変更してお試しください</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredQuestions.map((question) => (
+                <QuestionCard
+                  key={question._id}
+                  question={question}
+                  onClick={() => onQuestionClick(question._id)}
+                />
+              ))}
+
+              {/* もっと読み込むボタン（タイトル順は全件取得済みのため対象外） */}
+              {!isTitleSort && status === "CanLoadMore" && (
+                <div className="text-center pt-6">
+                  <button onClick={() => loadMore(20)} className="ga-btn ga-btn-ghost">
+                    さらに読み込む
+                  </button>
+                </div>
+              )}
+
+              {!isTitleSort && status === "LoadingMore" && (
+                <div className="text-center py-4">
+                  <div className="ga-spinner" style={{ width: 24, height: 24, borderWidth: 2 }}></div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

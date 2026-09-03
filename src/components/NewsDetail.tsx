@@ -14,8 +14,8 @@ export function NewsDetail({ newsId, onBack }: NewsDetailProps) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-300">読み込み中...</p>
+          <div className="ga-spinner mb-4"></div>
+          <p style={{ color: "var(--ga-muted)" }}>読み込み中...</p>
         </div>
       </div>
     );
@@ -30,56 +30,52 @@ export function NewsDetail({ newsId, onBack }: NewsDetailProps) {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* 戻るボタン */}
-      <button
-        onClick={onBack}
-        className="flex items-center space-x-2 text-gray-300 hover:text-yellow-400 transition-colors"
-      >
-        <span>←</span>
-        <span>お知らせ一覧に戻る</span>
-      </button>
+    <div className="ga-page">
+      <div className="ga-main" style={{ paddingTop: "clamp(24px, 5vw, 40px)" }}>
+        {/* 戻るボタン */}
+        <button onClick={onBack} className="ga-btn ga-btn-ghost ga-block">
+          ← お知らせ一覧に戻る
+        </button>
 
-      {/* 記事詳細 */}
-      <div className="amano-bg-card rounded-xl p-8 amano-crystal-border">
-        {/* ヘッダー */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
-            <span className="text-3xl">📢</span>
-            <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-sm">
-              {news.category}
-            </span>
-          </div>
-          <h1 className="text-3xl font-bold text-yellow-400 mb-4 amano-text-glow">
-            {news.title}
-          </h1>
-          <div className="text-gray-400 text-sm">
-            📅 {formatDate(news.publishDate)}
-          </div>
-        </div>
-
-        {/* サムネイル画像 */}
-        {news.thumbnailUrl && (
+        {/* 記事詳細 */}
+        <div className="ga-block ga-surface-card" style={{ padding: "clamp(20px, 5vw, 40px)" }}>
+          {/* ヘッダー */}
           <div className="mb-8">
-            <img
-              src={news.thumbnailUrl}
-              alt={news.title}
-              className="w-full max-w-2xl mx-auto rounded-lg shadow-lg"
-            />
+            <div className="mb-4">
+              <span className="ga-pill cat">{news.category}</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-4" style={{ color: "var(--ga-ink)" }}>
+              {news.title}
+            </h1>
+            <div className="text-sm" style={{ color: "var(--ga-muted)" }}>
+              {formatDate(news.publishDate)}
+            </div>
           </div>
-        )}
 
-        {/* 本文 */}
-        <div className="prose prose-invert max-w-none">
-          <div className="text-gray-200 whitespace-pre-wrap leading-relaxed">
-            {news.content}
+          {/* サムネイル画像 */}
+          {news.thumbnailUrl && (
+            <div className="mb-8">
+              <img
+                src={news.thumbnailUrl}
+                alt={news.title}
+                className="w-full max-w-2xl mx-auto rounded-lg"
+                style={{ boxShadow: "var(--ga-shadow)" }}
+              />
+            </div>
+          )}
+
+          {/* 本文 */}
+          <div className="max-w-none">
+            <div className="whitespace-pre-wrap leading-relaxed" style={{ color: "var(--ga-muted)" }}>
+              {news.content}
+            </div>
           </div>
-        </div>
 
-        {/* フッター */}
-        <div className="mt-8 pt-6 border-t border-gray-600">
-          <div className="text-sm text-gray-400">
-            カテゴリー: {news.category}
+          {/* フッター */}
+          <div className="mt-8 pt-6" style={{ borderTop: "1px solid var(--ga-line)" }}>
+            <div className="text-sm" style={{ color: "var(--ga-muted)" }}>
+              カテゴリー: {news.category}
+            </div>
           </div>
         </div>
       </div>

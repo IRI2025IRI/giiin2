@@ -33,15 +33,27 @@ interface QuestionCardProps {
   onClick?: () => void;
 }
 
+const statusTagClass: Record<string, string> = {
+  answered: "ga-tag status-answered",
+  pending: "ga-tag status-pending",
+  archived: "ga-tag status-archived",
+};
+
+const statusLabel: Record<string, string> = {
+  answered: "回答済み",
+  pending: "回答待ち",
+  archived: "アーカイブ",
+};
+
 export function QuestionCard({ question, onClick }: QuestionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
-  
+
   const toggleLike = useMutation(api.likes.toggle);
 
   const handleLike = async () => {
     if (isLiking) return;
-    
+
     setIsLiking(true);
     try {
       await toggleLike({ questionId: question._id });
@@ -49,32 +61,6 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
       console.error("Failed to toggle like:", error);
     } finally {
       setIsLiking(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "answered":
-        return "bg-gradient-to-r from-green-500 to-emerald-500 text-white";
-      case "pending":
-        return "bg-gradient-to-r from-yellow-500 to-orange-500 text-white";
-      case "archived":
-        return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
-      default:
-        return "bg-gradient-to-r from-purple-500 to-blue-500 text-white";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "answered":
-        return "回答済み";
-      case "pending":
-        return "回答待ち";
-      case "archived":
-        return "アーカイブ";
-      default:
-        return status;
     }
   };
 
@@ -102,23 +88,17 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
     return text.split(pattern).map((part, i) => {
       if (questionKeywords.includes(part)) {
         return (
-          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-xs font-bold shadow-lg">
-            {part}
-          </span>
+          <span key={i} className="ga-tag neutral">{part}</span>
         );
       }
       if (answerKeywords.includes(part)) {
         return (
-          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-xs font-bold shadow-lg">
-            {part}
-          </span>
+          <span key={i} className="ga-tag accent">{part}</span>
         );
       }
       if (otherKeywords.includes(part)) {
         return (
-          <span key={i} className="inline-block px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold shadow-lg">
-            {part}
-          </span>
+          <span key={i} className="ga-tag status-archived">{part}</span>
         );
       }
       return part;
@@ -126,28 +106,22 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
   };
 
   return (
-    <div className="amano-bg-glass rounded-xl p-6 amano-crystal-border hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]">
+    <div className="ga-surface-card transition-transform duration-200 hover:-translate-y-0.5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(question.status)}`}>
-              {getStatusText(question.status)}
-            </span>
-            <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-              {question.category}
-            </span>
+            <span className={statusTagClass[question.status]}>{statusLabel[question.status]}</span>
+            <span className="ga-pill cat">{question.category}</span>
             {question.sessionNumber && (
-              <span className="bg-gradient-to-r from-cyan-500 to-teal-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                {question.sessionNumber}
-              </span>
+              <span className="ga-tag neutral">{question.sessionNumber}</span>
             )}
-            <span className="text-gray-400 text-xs">
-              📅 {new Date(question.sessionDate).toLocaleDateString('ja-JP')}
+            <span className="text-xs" style={{ color: "var(--ga-muted)" }}>
+              {new Date(question.sessionDate).toLocaleDateString('ja-JP')}
             </span>
           </div>
-          
-          <h3 className="text-xl font-bold text-yellow-400 mb-2 amano-text-glow line-clamp-2">
+
+          <h3 className="text-xl font-bold mb-2" style={{ color: "var(--ga-ink)" }}>
             {question.title}
           </h3>
         </div>
@@ -155,22 +129,16 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
         {/* Member Info */}
         <div className="flex items-center space-x-3 flex-shrink-0">
           <div className="text-right">
-            <div className="font-medium text-gray-200">{question.memberName}</div>
+            <div className="font-medium" style={{ color: "var(--ga-ink)" }}>{question.memberName}</div>
             {question.memberParty && (
-              <div className="text-sm text-gray-400">{question.memberParty}</div>
+              <div className="text-sm" style={{ color: "var(--ga-muted)" }}>{question.memberParty}</div>
             )}
           </div>
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0 amano-crystal-border">
+          <div className="ga-avatar" style={{ width: 48, height: 48, fontSize: "1rem" }}>
             {question.memberPhotoUrl ? (
-              <img
-                src={question.memberPhotoUrl}
-                alt={question.memberName}
-                className="w-full h-full object-cover"
-              />
+              <img src={question.memberPhotoUrl} alt={question.memberName} />
             ) : (
-              <span className="text-white font-bold text-lg">
-                {question.memberName.charAt(0)}
-              </span>
+              question.memberName.charAt(0)
             )}
           </div>
         </div>
@@ -178,15 +146,16 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
 
       {/* Content */}
       <div className="mb-4">
-        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+        <div className="leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ga-muted)" }}>
           {highlightKeywords(isExpanded ? question.content : truncateContent(question.content))}
         </div>
         {question.content.length > 200 && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-cyan-400 hover:text-cyan-300 text-sm mt-2 font-medium transition-colors"
+            className="text-sm mt-2 font-medium transition-colors"
+            style={{ color: "var(--ga-teal-deep)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
-            {isExpanded ? "▲ 折りたたむ" : "▼ 続きを読む"}
+            {isExpanded ? "閉じる" : "続きを読む"}
           </button>
         )}
       </div>
@@ -195,25 +164,13 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
       {(question.youtubeUrl || question.documentUrl) && (
         <div className="flex flex-wrap gap-2 mb-4">
           {question.youtubeUrl && (
-            <a
-              href={question.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm hover:from-pink-500 hover:to-red-500 transition-all duration-300 transform hover:scale-105 amano-crystal-border"
-            >
-              <span>📺</span>
-              <span>YouTube</span>
+            <a href={question.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ga-btn ga-btn-ghost">
+              YouTube
             </a>
           )}
           {question.documentUrl && (
-            <a
-              href={question.documentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg text-sm hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 amano-crystal-border"
-            >
-              <span>📄</span>
-              <span>資料</span>
+            <a href={question.documentUrl} target="_blank" rel="noopener noreferrer" className="ga-btn ga-btn-ghost">
+              資料
             </a>
           )}
         </div>
@@ -221,45 +178,33 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
 
       {/* Responses Section */}
       {question.responses && question.responses.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-purple-500">
-          <h4 className="text-lg font-bold text-yellow-400 mb-4 amano-text-glow flex items-center">
-            💬 AI要約 ({question.responses.length}件)
+        <div className="mt-6 pt-6" style={{ borderTop: "1px solid var(--ga-line)" }}>
+          <h4 className="text-lg font-bold mb-4 flex items-center" style={{ color: "var(--ga-ink)" }}>
+            AI要約回答 ({question.responses.length}件)
             <InfoTooltip text="議員からの質問（質問側の内容）と、それに対する市の担当部署からの回答（市側の回答）をAIが要約して表示しています。" />
           </h4>
           <div className="space-y-4">
             {question.responses.map((response) => (
-              <div key={response._id} className="amano-bg-card rounded-lg p-4 amano-crystal-border">
+              <div key={response._id} className="rounded-lg p-4" style={{ background: "var(--ga-paper)", border: "1px solid var(--ga-line)" }}>
                 <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                    {response.respondentTitle || "未記入"}
-                  </span>
+                  <span className="ga-tag neutral">{response.respondentTitle || "未記入"}</span>
                   {response.department ? (
-                    <span className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      {response.department}
-                    </span>
+                    <span className="ga-tag accent">{response.department}</span>
                   ) : (
-                    <span className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      未記入
-                    </span>
+                    <span className="ga-tag status-archived">未記入</span>
                   )}
-                  <span className="text-gray-400 text-xs">
-                    📅 {new Date(response.responseDate).toLocaleDateString('ja-JP')}
+                  <span className="text-xs" style={{ color: "var(--ga-muted)" }}>
+                    {new Date(response.responseDate).toLocaleDateString('ja-JP')}
                   </span>
                 </div>
-                
-                <div className="text-gray-300 leading-relaxed mb-3 whitespace-pre-wrap">
+
+                <div className="leading-relaxed mb-3 whitespace-pre-wrap" style={{ color: "var(--ga-muted)" }}>
                   {highlightKeywords(response.content)}
                 </div>
-                
+
                 {response.documentUrl && (
-                  <a
-                    href={response.documentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-2 rounded-lg text-sm hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 transform hover:scale-105 amano-crystal-border"
-                  >
-                    <span>📄</span>
-                    <span>関連資料</span>
+                  <a href={response.documentUrl} target="_blank" rel="noopener noreferrer" className="ga-btn ga-btn-ghost">
+                    関連資料
                   </a>
                 )}
               </div>
@@ -269,32 +214,25 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-4 border-t border-purple-500">
+      <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--ga-line)" }}>
         <div className="flex items-center space-x-4">
           <button
             onClick={handleLike}
             disabled={isLiking}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 amano-crystal-border ${
-              question.isLiked
-                ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white"
-                : "bg-gradient-to-r from-gray-600 to-gray-700 text-gray-300 hover:from-orange-500 hover:to-yellow-500 hover:text-white"
-            }`}
+            className="ga-btn ga-btn-ghost"
           >
-            <span>{question.isLiked ? "🤔" : "💭"}</span>
+            <span>{question.isLiked ? "❤️" : "🤍"}</span>
             <span>{question.likeCount}</span>
           </button>
-          
-          <div className="flex items-center space-x-2 text-gray-400 text-sm">
+
+          <div className="flex items-center space-x-2 text-sm" style={{ color: "var(--ga-muted)" }}>
             <span>💬</span>
             <span>{question.responseCount} 件の回答</span>
           </div>
         </div>
 
         {onClick && (
-          <button
-            onClick={onClick}
-            className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-yellow-500 hover:via-purple-500 hover:to-cyan-400 transition-all duration-500 transform hover:scale-105 amano-crystal-border"
-          >
+          <button onClick={onClick} className="ga-btn ga-btn-primary">
             詳細を見る →
           </button>
         )}
@@ -302,19 +240,19 @@ export function QuestionCard({ question, onClick }: QuestionCardProps) {
 
       {/* キーワードハイライトの説明 */}
       {question.responses && question.responses.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-600">
-          <div className="text-xs text-gray-400 flex flex-wrap items-center gap-2">
-            <span>🔍 キーワードハイライト:</span>
-            <span className="inline-flex items-center space-x-1">
-              <span className="w-3 h-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></span>
+        <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--ga-line)" }}>
+          <div className="text-xs flex flex-wrap items-center gap-3" style={{ color: "var(--ga-muted)" }}>
+            <span>キーワードハイライト:</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full" style={{ background: "var(--ga-teal)" }}></span>
               <span>質問側</span>
             </span>
-            <span className="inline-flex items-center space-x-1">
-              <span className="w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full" style={{ background: "var(--ga-gold)" }}></span>
               <span>回答側</span>
             </span>
-            <span className="inline-flex items-center space-x-1">
-              <span className="w-3 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full" style={{ background: "var(--ga-muted)" }}></span>
               <span>その他</span>
             </span>
           </div>

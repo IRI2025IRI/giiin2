@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// YouTube URLから埋め込み再生用のURLを生成する（watch/short-url/embed形式に対応）
-export const getYouTubeEmbedUrl = (url: string): string | null => {
+// YouTube URLから動画IDを抽出する（watch/short-url/embed形式に対応）
+export const getYouTubeVideoId = (url: string): string | null => {
   try {
     const parsed = new URL(url);
     let videoId: string | null = null;
@@ -23,13 +23,22 @@ export const getYouTubeEmbedUrl = (url: string): string | null => {
       }
     }
 
-    videoId = videoId?.split(/[?&]/)[0] || null;
-    if (!videoId) return null;
-
-    return `https://www.youtube.com/embed/${videoId}`;
+    return videoId?.split(/[?&]/)[0] || null;
   } catch {
     return null;
   }
+};
+
+// YouTube URLから埋め込み再生用のURLを生成する
+export const getYouTubeEmbedUrl = (url: string): string | null => {
+  const videoId = getYouTubeVideoId(url);
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+};
+
+// YouTube URLからサムネイル画像URLを生成する
+export const getYouTubeThumbnailUrl = (url: string): string | null => {
+  const videoId = getYouTubeVideoId(url);
+  return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
 };
 
 // LINE browser detection and compatibility
