@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
 
@@ -14,9 +14,6 @@ export function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitContact = useMutation(api.contact.submitContactForm);
-
-  // デバッグ用：最新のお問い合わせを取得
-  const recentMessages = useQuery(api.contact.getContactMessages, {});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
