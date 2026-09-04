@@ -23,7 +23,10 @@ export function Slideshow() {
   const currentSlideData = slides[currentSlide];
 
   return (
-    <div className="relative w-full h-64 sm:h-80 lg:h-96 rounded-xl overflow-hidden shadow-lg mb-6 sm:mb-8">
+    <div
+      className="ga-block relative w-full h-64 sm:h-80 lg:h-96 overflow-hidden"
+      style={{ borderRadius: 16, boxShadow: "var(--ga-shadow)" }}
+    >
       {/* スライド画像 */}
       {currentSlideData.imageUrl && (
         <img
